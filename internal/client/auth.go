@@ -11,7 +11,6 @@ import (
 
 const authURL = "https://auth.cern.ch/auth/realms/cern/api-access/token"
 
-
 type AuthResponse struct {
 	AccessToken      string `json:"access_token"`
 	TokenType        string `json:"token_type"`

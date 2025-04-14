@@ -8,27 +8,27 @@ import (
 )
 
 type Device struct {
-	Name                string `json:"name"`
-	SerialNumber        string `json:"serialNumber"`
-	InventoryNumber     string `json:"inventoryNumber"`
-	Tag                 string `json:"tag"`
-	Description         string `json:"description"`
-	Zone                string `json:"zone"`
-	DHCPResponse        string `json:"dhcpResponse"`
-	IPv4InDNSAndFirewall bool   `json:"ipv4InDnsAndFirewall"`
-	IPv6InDNSAndFirewall bool   `json:"ipv6InDnsAndFirewall"`
-	ManagerLock         string `json:"managerLock"`
-	Ownership           string `json:"ownership"`
-	Location            Location `json:"location"`
-	Parent              string   `json:"parent"`
-	Type                string   `json:"type"`
-	Manufacturer        string   `json:"manufacturer"`
-	Model               string   `json:"model"`
-	OperatingSystem     OperatingSystem `json:"operatingSystem"`
-	Manager             Contact `json:"manager"`
-	Responsible         Contact `json:"responsible"`
-	User                Contact `json:"user"`
-	Version             int     `json:"version"`
+	Name                 string          `json:"name"`
+	SerialNumber         string          `json:"serialNumber"`
+	InventoryNumber      string          `json:"inventoryNumber"`
+	Tag                  string          `json:"tag"`
+	Description          string          `json:"description"`
+	Zone                 string          `json:"zone"`
+	DHCPResponse         string          `json:"dhcpResponse"`
+	IPv4InDNSAndFirewall bool            `json:"ipv4InDnsAndFirewall"`
+	IPv6InDNSAndFirewall bool            `json:"ipv6InDnsAndFirewall"`
+	ManagerLock          string          `json:"managerLock"`
+	Ownership            string          `json:"ownership"`
+	Location             Location        `json:"location"`
+	Parent               string          `json:"parent"`
+	Type                 string          `json:"type"`
+	Manufacturer         string          `json:"manufacturer"`
+	Model                string          `json:"model"`
+	OperatingSystem      OperatingSystem `json:"operatingSystem"`
+	Manager              Contact         `json:"manager"`
+	Responsible          Contact         `json:"responsible"`
+	User                 Contact         `json:"user"`
+	Version              int             `json:"version"`
 }
 
 func (c *Client) CreateDevice(device Device) (*Device, error) {
@@ -46,7 +46,7 @@ func (c *Client) CreateDevice(device Device) (*Device, error) {
 }
 
 func (c *Client) GetDevice(name string) (*Device, error) {
-	url := fmt.Sprintf("%s%s%s",  landbURL, devicesURL, name)
+	url := fmt.Sprintf("%s%s%s", landbURL, devicesURL, name)
 
 	resp, err := c.HTTPClient.R().
 		SetResult(&Device{}).

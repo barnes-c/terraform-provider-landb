@@ -1,8 +1,8 @@
 package landb
 
 const landbURL = "https://landb.cern.ch/api/"
-const devicesURL= "beta/devices/"
-const setsURL= "beta/sets/"
+const devicesURL = "beta/devices/"
+const setsURL = "beta/sets/"
 
 type Location struct {
 	Building string `json:"building"`
@@ -16,19 +16,19 @@ type OperatingSystem struct {
 }
 
 type Contact struct {
-	Type     string    `json:"type"` // PERSON or EGROUP or RESERVED
-	Person   Person    `json:"person"`
-	EGroup   EGroup    `json:"egroup"`
-	Reserved Reserved  `json:"reserved"`
+	Type     string   `json:"type"` // PERSON or EGROUP or RESERVED
+	Person   Person   `json:"person"`
+	EGroup   EGroup   `json:"egroup"`
+	Reserved Reserved `json:"reserved"`
 }
 
 type Person struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Email     string `json:"email"`
-	Username  string `json:"username"`
+	FirstName  string `json:"firstName"`
+	LastName   string `json:"lastName"`
+	Email      string `json:"email"`
+	Username   string `json:"username"`
 	Department string `json:"department"`
-	Group     string `json:"group"`
+	Group      string `json:"group"`
 }
 
 type EGroup struct {

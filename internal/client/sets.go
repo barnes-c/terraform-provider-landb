@@ -8,14 +8,14 @@ import (
 )
 
 type Set struct {
-	Name                string   `json:"name"`
-	Type                string   `json:"type"`
-	NetworkDomain       string   `json:"networkDomain"`
-	Responsible         Contact  `json:"responsible"`
-	Description         string   `json:"description"`
-	ProjectURL          string   `json:"projectUrl"`
-	ReceiveNotifications bool     `json:"receiveNotifications"`
-	Version             int      `json:"version"`
+	Name                 string  `json:"name"`
+	Type                 string  `json:"type"`
+	NetworkDomain        string  `json:"networkDomain"`
+	Responsible          Contact `json:"responsible"`
+	Description          string  `json:"description"`
+	ProjectURL           string  `json:"projectUrl"`
+	ReceiveNotifications bool    `json:"receiveNotifications"`
+	Version              int     `json:"version"`
 }
 
 func (c *Client) CreateSet(set Set) (*Set, error) {
@@ -33,7 +33,7 @@ func (c *Client) CreateSet(set Set) (*Set, error) {
 }
 
 func (c *Client) GetSet(name string) (*Set, error) {
-	url := fmt.Sprintf("%s%s%s",  landbURL, setsURL, name)
+	url := fmt.Sprintf("%s%s%s", landbURL, setsURL, name)
 
 	resp, err := c.HTTPClient.R().
 		SetResult(&Set{}).
