@@ -10,8 +10,8 @@ To use the provider you just have to declare a provider block:
 
 ```terraform
 provider "landb" {
-	endpoint       ="<YOUR-LANDB-SERVER>
-	client_id      ="<YOUR-CLIENT-id>
+	endpoint       ="<YOUR-LANDB-SERVER>"
+	client_id      ="<YOUR-CLIENT-id>"
 	client_secret  ="<YOUR-CLIENT-SECRET>"
 	audience       ="<YOUR-AUDIENCE>"
 }
