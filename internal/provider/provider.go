@@ -1,8 +1,13 @@
-package landb
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
+
+package provider
 
 import (
 	"context"
 	"os"
+
+	landb "landb/internal/client"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -14,46 +19,53 @@ import (
 )
 
 var (
-	_ provider.Provider = &landb{}
+	_ provider.Provider = &landbProvider{}
 )
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &landb{
+		return &landbProvider{
 			version: version,
 		}
 	}
 }
 
-type landb struct {
+type LandbModel struct {
+	Endpoint     types.String `tfsdk:"endpoint"`
+	ClientID     types.String `tfsdk:"client_id"`
+	ClientSecret types.String `tfsdk:"client_secret"`
+	Audience     types.String `tfsdk:"audience"`
+}
+
+type landbProvider struct {
 	version string
 }
 
-func (p *landb) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "LanDB"
+func (p *landbProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "landb"
 	resp.Version = p.version
 }
 
-func (p *landb) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *landbProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"ldap_server": schema.StringAttribute{
+			"endpoint": schema.StringAttribute{
 				Optional: true,
 			},
-			"landb_endpoint": schema.StringAttribute{
+			"client_id": schema.StringAttribute{
 				Optional: true,
 			},
-			"username": schema.StringAttribute{
+			"client_secret": schema.StringAttribute{
 				Optional: true,
 			},
-			"password": schema.StringAttribute{
-				Optional:  true,
-				Sensitive: true,
+			"audience": schema.StringAttribute{
+				Optional: true,
 			},
 		},
 	}
 }
-func (p *landb) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+
+func (p *landbProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Info(ctx, "Configuring LanDB client")
 
 	var config LandbModel
@@ -63,49 +75,49 @@ func (p *landb) Configure(ctx context.Context, req provider.ConfigureRequest, re
 		return
 	}
 
-	ldap_server := os.Getenv("LANDB_LDAP_SERVER")
-	landb_endpoint := os.Getenv("LANDB_ENDPOINT")
-	username := os.Getenv("LANDB_USERNAME")
-	password := os.Getenv("LANDB_USERNAME")
+	endpoint := os.Getenv("LANDB_ENDPOINT")
+	client_id := os.Getenv("LANDB_SSO_CLIENT_ID")
+	client_secret := os.Getenv("LANDB_SSO_CLIENT_SECRET")
+	audience := os.Getenv("LANDB_SSO_AUDIENCE")
 
-	ctx = tflog.SetField(ctx, "ldap_server", ldap_server)
-	ctx = tflog.SetField(ctx, "landb_endpoint", landb_endpoint)
-	ctx = tflog.SetField(ctx, "username", username)
-	ctx = tflog.SetField(ctx, "password", password)
+	ctx = tflog.SetField(ctx, "endpoint", endpoint)
+	ctx = tflog.SetField(ctx, "client_id", client_id)
+	ctx = tflog.SetField(ctx, "client_secret", client_secret)
+	ctx = tflog.SetField(ctx, "audience", audience)
 
-	if config.LdapServer.IsUnknown() {
+	if config.Endpoint.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("ldap_server"),
-			"Unknown LanDB LDAP server",
-			"The provider cannot create the LanDB API client as there is an unknown configuration value for the LanDB API ldap_server. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the LDAP_SERVER environment variable.",
-		)
-	}
-
-	if config.Username.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("landb_endpoint"),
-			"Unknown LanDB API Endpoint",
+			path.Root("endpoint"),
+			"Invalid LanDB API endpoint",
 			"The provider cannot create the LanDB API client as there is an unknown configuration value for the LanDB API endpoint. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the LANDB_USERNAME environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the LANDB_ENDPOINT environment variable.",
 		)
 	}
 
-	if config.Username.IsUnknown() {
+	if config.ClientID.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("username"),
-			"Unknown LanDB API Username",
-			"The provider cannot create the LanDB API client as there is an unknown configuration value for the LanDB API username. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the LANDB_USERNAME environment variable.",
+			path.Root("client_id"),
+			"Invalid LanDB LDAP client_id",
+			"The provider cannot create the LanDB API client as there is an unknown configuration value for the LanDB API client_id. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the LANDB_SSO_CLIENT_ID environment variable.",
 		)
 	}
 
-	if config.Password.IsUnknown() {
+	if config.ClientSecret.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("password"),
-			"Unknown LanDB API Password",
-			"The provider cannot create the LanDB API client as there is an unknown configuration value for the LanDB API password. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the LANDB_PASSWORD environment variable.",
+			path.Root("client_secret"),
+			"Invalid LanDB API client_secret",
+			"The provider cannot create the LanDB API client as there is an unknown configuration value for the LanDB API client_secret. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the LANDB_SSO_CLIENT_SECRET environment variable.",
+		)
+	}
+
+	if config.Audience.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("audience"),
+			"Unknown  audience",
+			"The provider cannot create the LanDB API client as there is an unknown configuration value for the LanDB API audience. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the LANDB_SSO_AUDIENCE environment variable.",
 		)
 	}
 
@@ -113,58 +125,58 @@ func (p *landb) Configure(ctx context.Context, req provider.ConfigureRequest, re
 		return
 	}
 
-	if !config.LdapServer.IsNull() {
-		ldap_server = config.LdapServer.ValueString()
+	if !config.Endpoint.IsNull() {
+		endpoint = config.Endpoint.ValueString()
 	}
 
-	if !config.LandbEndpoint.IsNull() {
-		landb_endpoint = config.LandbEndpoint.ValueString()
+	if !config.ClientID.IsNull() {
+		client_id = config.ClientID.ValueString()
 	}
 
-	if !config.Username.IsNull() {
-		username = config.Username.ValueString()
+	if !config.ClientSecret.IsNull() {
+		client_secret = config.ClientSecret.ValueString()
 	}
 
-	if !config.Password.IsNull() {
-		password = config.Password.ValueString()
+	if !config.Audience.IsNull() {
+		audience = config.Audience.ValueString()
 	}
 
-	if ldap_server == "" {
+	if endpoint == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("ldap_server"),
-			"Missing LanDB LDAP server",
-			"The provider cannot create the LanDB API client as there is a missing or empty value for the LanDB LDAP server. "+
-				"Set the host value in the configuration or use the LANDB_LDAP_SERVER environment variable. "+
+			path.Root("endpoint"),
+			"Missing LanDB API endpoint",
+			"The provider cannot create the LanDB API client as there is a missing or empty value for the endpoint. "+
+				"Set the endpoint value in the configuration or use the LANDB_ENDPOINT environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
 
-	if landb_endpoint == "" {
+	if client_id == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("landb_endpoint"),
-			"Missing LanDB API Endpoint",
-			"The provider cannot create the LanDB API client as there is a missing or empty value for the LanDB API endpoint. "+
-				"Set the landb_endpoint value in the configuration or use the LANDB_ENDPOINT environment variable. "+
+			path.Root("client_id"),
+			"Missing CERN SSO client ID",
+			"The provider cannot create the LanDB API client as there is a missing or empty value for the client_id. "+
+				"Set the client_id value in the configuration or use the LANDB_SSO_CLIENT_ID environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
 
-	if username == "" {
+	if client_secret == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("username"),
-			"Missing LanDB API Username",
-			"The provider cannot create the LanDB API client as there is a missing or empty value for the LanDB API username. "+
-				"Set the username value in the configuration or use the LANDB_USERNAME environment variable. "+
+			path.Root("client_secret"),
+			"Missing CERN SSO client secret",
+			"The provider cannot fetch a authentication token from the CERN SSO application as there is a missing or empty value for the client_secret. "+
+				"Set the client_secret value in the configuration or use the LANDB_SSO_CLIENT_SECRET environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
 
-	if password == "" {
+	if audience == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("password"),
-			"Missing LanDB API Password",
-			"The provider cannot create the LanDB API client as there is a missing or empty value for the LanDB API password. "+
-				"Set the password value in the configuration or use the LANDB_PASSWORD environment variable. "+
+			path.Root("audience"),
+			"Missing CERN SSO audience",
+			"The provider cannot create the LanDB API client as there is a missing or empty value for the LanDB API audience. "+
+				"Set the audience value in the configuration or use the LANDB_SSO_AUDIENCE environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -173,15 +185,15 @@ func (p *landb) Configure(ctx context.Context, req provider.ConfigureRequest, re
 		return
 	}
 
-	ctx = tflog.SetField(ctx, "ldap_server", ldap_server)
-	ctx = tflog.SetField(ctx, "landb_endpoint", landb_endpoint)
-	ctx = tflog.SetField(ctx, "username", username)
-	ctx = tflog.SetField(ctx, "password", password)
+	ctx = tflog.SetField(ctx, "endpoint", endpoint)
+	ctx = tflog.SetField(ctx, "client_id", client_id)
+	ctx = tflog.SetField(ctx, "client_secret", client_secret)
+	ctx = tflog.SetField(ctx, "audience", audience)
 	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "password")
 
 	tflog.Debug(ctx, "Creating LanDB client")
 
-	client, err := landb.NewClient(&ldap_server, &landb_endpoint, &username, &password)
+	client, err := landb.NewClient(endpoint, client_id, client_secret, audience)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create LanDB API Client",
@@ -198,24 +210,13 @@ func (p *landb) Configure(ctx context.Context, req provider.ConfigureRequest, re
 	tflog.Info(ctx, "Configured LanDB client", map[string]any{"success": true})
 }
 
-func (p *landb) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewEGroupDataSource,
-		NewTeigiSecretDataSource,
-	}
-}
-
-func (p *landb) Resources(_ context.Context) []func() resource.Resource {
+func (p *landbProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewDeviceResource,
-		NewDeviceCardResource,
-		NewDeviceInterfaceResource,
+		// NewSetResource,
 	}
 }
 
-type LandbModel struct {
-	LdapServer    types.String `tfsdk:"ldap_server"`
-	LandbEndpoint types.String `tfsdk:"landb_endpoint"`
-	Username      types.String `tfsdk:"username"`
-	Password      types.String `tfsdk:"password"`
+func (p *landbProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{}
 }

@@ -1,11 +1,19 @@
 // Copyright (c) Christopher Barnes <christopher@barnes.biz>
 // SPDX-License-Identifier: MPL-2.0
 
+package provider
+
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
+
 package landb
 
 import (
 	"fmt"
 )
+
+const landbURL = "https://landb.cern.ch/api/"
+const devicesURL= "beta/devices/"
 
 type Device struct {
 	Name                string `json:"name"`
@@ -30,6 +38,7 @@ type Device struct {
 	User                Contact `json:"user"`
 	Version             int     `json:"version"`
 }
+
 
 func (c *Client) CreateDevice(device Device) (*Device, error) {
 	url := fmt.Sprintf("%s%s", landbURL, devicesURL)

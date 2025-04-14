@@ -1,15 +1,18 @@
-package landb
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
+
+package provider
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	landb "landb/internal/client"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -37,7 +40,7 @@ func (r *deviceResource) Configure(_ context.Context, req resource.ConfigureRequ
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *landb.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -56,32 +59,40 @@ func (r *deviceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"id": schema.StringAttribute{
 				Computed: true,
 			},
-			"last_updated": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"device_name": schema.StringAttribute{
+			"name": schema.StringAttribute{
 				Required: true,
 			},
-			"manufacturer": schema.StringAttribute{
-				Required: true,
+			"serialNumber": schema.StringAttribute{
+				Optional: true,
 			},
-			"model": schema.StringAttribute{
+			"inventoryNumber": schema.StringAttribute{
+				Optional: true,
+			},
+			"tag": schema.StringAttribute{
 				Required: true,
 			},
 			"description": schema.StringAttribute{
 				Optional: true,
 			},
-			"tag": schema.StringAttribute{
-				Optional: true,
+			"zone": schema.StringAttribute{
+				Required: true,
 			},
-			"ipv6_ready": schema.BoolAttribute{
+			"dhcpResponse": schema.StringAttribute{
+				Required: true,
+			},
+			"ipv4InDnsAndFirewall": schema.BoolAttribute{
+				Required: true,
+			},
+			"ipv6InDnsAndFirewall": schema.BoolAttribute{
+				Required: true,
+			},
+			"managerLock": schema.StringAttribute{
+				Required: true,
+			},
+			"ownership": schema.StringAttribute{
 				Required: true,
 			},
 			"location": schema.SingleNestedAttribute{
-				Required: true,
 				Attributes: map[string]schema.Attribute{
 					"building": schema.StringAttribute{
 						Required: true,
@@ -94,10 +105,21 @@ func (r *deviceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					},
 				},
 			},
-			"operating_system": schema.SingleNestedAttribute{
+			"parent": schema.StringAttribute{
 				Required: true,
+			},
+			"type": schema.StringAttribute{
+				Required: true,
+			},
+			"manufacturer": schema.StringAttribute{
+				Required: true,
+			},
+			"model": schema.StringAttribute{
+				Required: true,
+			},
+			"operatingSystem": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
+					"family": schema.StringAttribute{
 						Required: true,
 					},
 					"version": schema.StringAttribute{
@@ -105,181 +127,264 @@ func (r *deviceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 					},
 				},
 			},
-			"landb_manager_person": schema.SingleNestedAttribute{
-				Required: true,
+			"manager": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
+					"type": schema.StringAttribute{
 						Required: true,
 					},
-					"first_name": schema.StringAttribute{
-						Required: true,
+					"person": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"firstName": schema.StringAttribute{
+								Required: true,
+							},
+							"lastName": schema.StringAttribute{
+								Required: true,
+							},
+							"email": schema.StringAttribute{
+								Required: true,
+							},
+							"username": schema.StringAttribute{
+								Required: true,
+							},
+							"department": schema.StringAttribute{
+								Required: true,
+							},
+							"group": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
-					"department": schema.StringAttribute{
-						Required: true,
+					"egroup": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"name": schema.StringAttribute{
+								Required: true,
+							},
+							"email": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
-					"group": schema.StringAttribute{
-						Required: true,
+					"reserved": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"firstName": schema.StringAttribute{
+								Required: true,
+							},
+							"lastName": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
 				},
 			},
-			"responsible_person": schema.SingleNestedAttribute{
-				Required: true,
+			"responsible": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
+					"type": schema.StringAttribute{
 						Required: true,
 					},
-					"first_name": schema.StringAttribute{
-						Required: true,
+					"person": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"firstName": schema.StringAttribute{
+								Required: true,
+							},
+							"lastName": schema.StringAttribute{
+								Required: true,
+							},
+							"email": schema.StringAttribute{
+								Required: true,
+							},
+							"username": schema.StringAttribute{
+								Required: true,
+							},
+							"department": schema.StringAttribute{
+								Required: true,
+							},
+							"group": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
-					"department": schema.StringAttribute{
-						Required: true,
+					"egroup": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"name": schema.StringAttribute{
+								Required: true,
+							},
+							"email": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
-					"group": schema.StringAttribute{
-						Required: true,
+					"reserved": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"firstName": schema.StringAttribute{
+								Required: true,
+							},
+							"lastName": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
 				},
 			},
-			"user_person": schema.SingleNestedAttribute{
-				Required: true,
+			"user": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
+					"type": schema.StringAttribute{
 						Required: true,
 					},
-					"first_name": schema.StringAttribute{
-						Required: true,
+					"person": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"firstName": schema.StringAttribute{
+								Required: true,
+							},
+							"lastName": schema.StringAttribute{
+								Required: true,
+							},
+							"email": schema.StringAttribute{
+								Required: true,
+							},
+							"username": schema.StringAttribute{
+								Required: true,
+							},
+							"department": schema.StringAttribute{
+								Required: true,
+							},
+							"group": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
-					"department": schema.StringAttribute{
-						Required: true,
+					"egroup": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"name": schema.StringAttribute{
+								Required: true,
+							},
+							"email": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
-					"group": schema.StringAttribute{
-						Required: true,
+					"reserved": schema.SingleNestedAttribute{
+						Attributes: map[string]schema.Attribute{
+							"firstName": schema.StringAttribute{
+								Required: true,
+							},
+							"lastName": schema.StringAttribute{
+								Required: true,
+							},
+						},
 					},
 				},
+			},
+			"version": schema.Int64Attribute{
+				Required: true,
+			},
+			"_createdAt": schema.StringAttribute{
+				Computed:    true,
+				Description: "Timestamp when the resource was created, stored as RFC3339 string",
+			},
+			"_updatedAt": schema.StringAttribute{
+				Computed:    true,
+				Description: "Timestamp when the resource was updates, stored as RFC3339 string",
+			},
+			"_macAddresses": schema.ListAttribute{
+				Computed:    true,
+				ElementType: types.StringType,
+				Description: "List of MAC addresses associated with the device",
 			},
 		},
 	}
 }
 
 func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan DeviceResourceModel
+	var plan DeviceResource
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	deviceModel := DeviceModel{
-		DeviceName:   plan.DeviceName,
-		Manufacturer: plan.Manufacturer,
-		Model:        plan.Model,
-		Description:  plan.Description,
-		Tag:          plan.Tag,
-		IPv6Ready:    plan.IPv6Ready,
-		Location: LocationModel{
-			Building: plan.Location.Building,
-			Floor:    plan.Location.Floor,
-			Room:     plan.Location.Room,
-		},
-		OperatingSystem: OperatingSystemModel{
-			Name:    plan.OperatingSystem.Name,
-			Version: plan.OperatingSystem.Version,
-		},
-		LandbManagerPerson: PersonModel{
-			Name:       plan.LandbManagerPerson.Name,
-			FirstName:  plan.LandbManagerPerson.FirstName,
-			Department: plan.LandbManagerPerson.Department,
-			Group:      plan.LandbManagerPerson.Group,
-		},
-		ResponsiblePerson: PersonModel{
-			Name:       plan.ResponsiblePerson.Name,
-			FirstName:  plan.ResponsiblePerson.FirstName,
-			Department: plan.ResponsiblePerson.Department,
-			Group:      plan.ResponsiblePerson.Group,
-		},
-		UserPerson: PersonModel{
-			Name:       plan.UserPerson.Name,
-			FirstName:  plan.UserPerson.FirstName,
-			Department: plan.UserPerson.Department,
-			Group:      plan.UserPerson.Group,
-		},
-	}
-
-	createOptions := DeviceCreateOptions{}
-
-	done, err := r.client.DeviceCreate(ctx, deviceModel, createOptions)
-	if err != nil || !done {
-		resp.Diagnostics.AddError(
-			"Error creating Device",
-			fmt.Sprintf("Error creating Device %s: %s", deviceModel.DeviceName, err.Error()),
-		)
-		return
-	}
-
-	plan.ID = deviceModel.DeviceName
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
-
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 }
 
-// Read fetches the latest state from the API and updates Terraform.
 func (r *deviceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state DeviceResourceModel
-	diags := req.State.Get(ctx, &state)
+	var deviceState DeviceResource
+	diags := req.State.Get(ctx, &deviceState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Retrieve the Device from the API.
-	device, err := r.client.GetDevice(state.ID.ValueString())
+	device, err := r.client.GetDevice(deviceState.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading Device",
-			fmt.Sprintf("Could not read Device with ID %s: %s", state.ID.ValueString(), err.Error()),
+			fmt.Sprintf("Could not read Device with Name %s: %s", deviceState.Name, err.Error()),
 		)
 		return
 	}
+	if device.SerialNumber != nil {
+		serialNumber := types.StringPointerValue(device.SerialNumber)
+		deviceState.SerialNumber = &serialNumber
+	} else {
+		deviceState.SerialNumber = nil
+	}
 
-	state.DeviceName = device.DeviceName
-	state.Manufacturer = device.Manufacturer
-	state.Model = device.Model
-	state.Description = device.Description
-	state.Tag = device.Tag
-	state.IPv6Ready = device.IPv6Ready
-	state.Location = LocationModel{
-		Building: device.Location.Building,
-		Floor:    device.Location.Floor,
-		Room:     device.Location.Room,
+	if device.InventoryNumber != nil {
+		inventoryNumber := types.StringPointerValue(device.InventoryNumber)
+		deviceState.InventoryNumber = &inventoryNumber
+	} else {
+		deviceState.InventoryNumber = nil
 	}
-	state.OperatingSystem = OperatingSystemModel{
-		Name:    device.OperatingSystem.Name,
-		Version: device.OperatingSystem.Version,
-	}
-	state.LandbManagerPerson = PersonModel{
-		Name:       device.LandbManagerPerson.Name,
-		FirstName:  device.LandbManagerPerson.FirstName,
-		Department: device.LandbManagerPerson.Department,
-		Group:      device.LandbManagerPerson.Group,
-	}
-	state.ResponsiblePerson = PersonModel{
-		Name:       device.ResponsiblePerson.Name,
-		FirstName:  device.ResponsiblePerson.FirstName,
-		Department: device.ResponsiblePerson.Department,
-		Group:      device.ResponsiblePerson.Group,
-	}
-	state.UserPerson = PersonModel{
-		Name:       device.UserPerson.Name,
-		FirstName:  device.UserPerson.FirstName,
-		Department: device.UserPerson.Department,
-		Group:      device.UserPerson.Group,
-	}
-	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	diags = resp.State.Set(ctx, state)
+	if device.Description != nil {
+		description := types.StringPointerValue(device.Description)
+		deviceState.Description = &description
+	} else {
+		deviceState.Description = nil
+	}
+
+	deviceState.Name = types.StringValue(device.Name)
+	deviceState.Tag = types.StringValue(device.Tag)
+	deviceState.Zone = types.StringValue(device.Zone)
+	deviceState.DHCPResponse = types.StringValue(device.DHCPResponse)
+	deviceState.IPv4InDnsFirewall = types.BoolValue(device.IPv4InDnsFirewall)
+	deviceState.IPv6InDnsFirewall = types.BoolValue(device.IPv6InDnsFirewall)
+	deviceState.ManagerLock = types.StringValue(device.ManagerLock)
+	deviceState.Ownership = types.StringValue(device.Ownership)
+	deviceState.Location = Location{
+		Building: types.StringValue(device.Location.Building),
+		Floor:    types.StringValue(device.Location.Floor),
+		Room:     types.StringValue(device.Location.Room),
+	}
+	deviceState.Parent = types.StringValue(device.Parent)
+	deviceState.Type = types.StringValue(device.Type)
+	deviceState.Manufacturer = types.StringValue(device.Manufacturer)
+	deviceState.Model = types.StringValue(device.Model)
+	deviceState.OperatingSystem = OperatingSystem{
+		Family:  types.StringValue(device.OperatingSystem.Family),
+		Version: types.StringValue(device.OperatingSystem.Version),
+	}
+	deviceState.Manager = Contact{
+		Type:     types.StringValue(device.Manager.Type),
+		Person:   convertPerson(device.Manager.Person),
+		EGroup:   convertEGroup(device.Manager.EGroup),
+		Reserved: convertReserved(device.Manager.Reserved),
+	}
+	deviceState.Responsible = Contact{
+		Type:     types.StringValue(device.Responsible.Type),
+		Person:   convertPerson(device.Responsible.Person),
+		EGroup:   convertEGroup(device.Responsible.EGroup),
+		Reserved: convertReserved(device.Responsible.Reserved),
+	}
+	deviceState.User = Contact{
+		Type:     types.StringValue(device.User.Type),
+		Person:   convertPerson(device.User.Person),
+		EGroup:   convertEGroup(device.User.EGroup),
+		Reserved: convertReserved(device.User.Reserved),
+	}
+	deviceState.Version = types.Int32Value(int32(device.Version))
+
+	diags = resp.State.Set(ctx, deviceState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -287,103 +392,125 @@ func (r *deviceResource) Read(ctx context.Context, req resource.ReadRequest, res
 }
 
 func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan DeviceResourceModel
-	diags := req.Plan.Get(ctx, &plan)
+	var devicePlan DeviceResource
+	diags := req.Plan.Get(ctx, &devicePlan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	deviceModel := DeviceModel{
-		DeviceName:   plan.DeviceName,
-		Manufacturer: plan.Manufacturer,
-		Model:        plan.Model,
-		Description:  plan.Description,
-		Tag:          plan.Tag,
-		IPv6Ready:    plan.IPv6Ready,
-		Location: LocationModel{
-			Building: plan.Location.Building,
-			Floor:    plan.Location.Floor,
-			Room:     plan.Location.Room,
+	device := Device{
+		Name:              devicePlan.Name,
+		SerialNumber:      devicePlan.SerialNumber,
+		InventoryNumber:   devicePlan.InventoryNumber,
+		Tag:               devicePlan.Tag,
+		Description:       devicePlan.Description,
+		Zone:              devicePlan.Zone,
+		DHCPResponse:      devicePlan.DHCPResponse,
+		IPv4InDnsFirewall: devicePlan.IPv4InDnsFirewall,
+		IPv6InDnsFirewall: devicePlan.IPv6InDnsFirewall,
+		ManagerLock:       devicePlan.ManagerLock,
+		Ownership:         devicePlan.Ownership,
+		Location: Location{
+			Building: devicePlan.Location.Building,
+			Floor:    devicePlan.Location.Floor,
+			Room:     devicePlan.Location.Room,
 		},
-		OperatingSystem: OperatingSystemModel{
-			Name:    plan.OperatingSystem.Name,
-			Version: plan.OperatingSystem.Version,
+		Parent:       devicePlan.Parent,
+		Type:         devicePlan.Type,
+		Manufacturer: devicePlan.Manufacturer,
+		Model:        devicePlan.Model,
+		OperatingSystem: OperatingSystem{
+			Family:  devicePlan.OperatingSystem.Family,
+			Version: devicePlan.OperatingSystem.Version,
 		},
-		LandbManagerPerson: PersonModel{
-			Name:       plan.LandbManagerPerson.Name,
-			FirstName:  plan.LandbManagerPerson.FirstName,
-			Department: plan.LandbManagerPerson.Department,
-			Group:      plan.LandbManagerPerson.Group,
+		Manager: Contact{
+			Type:     devicePlan.Manager.Type,
+			Person:   devicePlan.Manager.Person,
+			EGroup:   devicePlan.Manager.EGroup,
+			Reserved: devicePlan.Manager.Reserved,
 		},
-		ResponsiblePerson: PersonModel{
-			Name:       plan.ResponsiblePerson.Name,
-			FirstName:  plan.ResponsiblePerson.FirstName,
-			Department: plan.ResponsiblePerson.Department,
-			Group:      plan.ResponsiblePerson.Group,
+		Responsible: Contact{
+			Type:     devicePlan.Responsible.Type,
+			Person:   devicePlan.Responsible.Person,
+			EGroup:   devicePlan.Responsible.EGroup,
+			Reserved: devicePlan.Responsible.Reserved,
 		},
-		UserPerson: PersonModel{
-			Name:       plan.UserPerson.Name,
-			FirstName:  plan.UserPerson.FirstName,
-			Department: plan.UserPerson.Department,
-			Group:      plan.UserPerson.Group,
+		User: Contact{
+			Type:     devicePlan.User.Type,
+			Person:   devicePlan.User.Person,
+			EGroup:   devicePlan.User.EGroup,
+			Reserved: devicePlan.User.Reserved,
 		},
+		Version: devicePlan.Version,
+		// UpdatedAt:    devicePlan.UpdatedAt,
 	}
 
-	_, err := r.client.UpdateDevice(ctx, plan.ID.ValueString(), deviceModel)
+	_, err := r.client.UpdateDevice(device.Name.String(), device)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating Device",
-			fmt.Sprintf("Could not update Device %s: %s", plan.ID.ValueString(), err.Error()),
+			fmt.Sprintf("Could not update Device %s: %s", devicePlan.Name, err.Error()),
 		)
 		return
 	}
 
-	device, err := r.client.GetDevice(plan.ID.ValueString())
+	device, err = r.client.GetDevice(device.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading updated Device",
-			fmt.Sprintf("Could not read Device %s: %s", plan.ID.ValueString(), err.Error()),
+			fmt.Sprintf("Could not read Device %s: %s", devicePlan.Name, err.Error()),
 		)
 		return
 	}
 
-	state := DeviceResourceModel{
-		ID:           device.DeviceName,
-		DeviceName:   device.DeviceName,
-		Manufacturer: device.Manufacturer,
-		Model:        device.Model,
-		Description:  device.Description,
-		Tag:          device.Tag,
-		IPv6Ready:    device.IPv6Ready,
-		Location: LocationModel{
+	state := DeviceResource{
+		ID:                device.Name,
+		// ID:                uudi,
+		Name:              device.Name,
+		SerialNumber:      device.SerialNumber,
+		InventoryNumber:   device.InventoryNumber,
+		Tag:               device.Tag,
+		Description:       device.Description,
+		Zone:              device.Zone,
+		DHCPResponse:      device.DHCPResponse,
+		IPv4InDnsFirewall: device.IPv4InDnsFirewall,
+		IPv6InDnsFirewall: device.IPv6InDnsFirewall,
+		ManagerLock:       device.ManagerLock,
+		Ownership:         device.Ownership,
+		Location: Location{
 			Building: device.Location.Building,
 			Floor:    device.Location.Floor,
 			Room:     device.Location.Room,
 		},
-		OperatingSystem: OperatingSystemModel{
-			Name:    device.OperatingSystem.Name,
+		Parent:       device.Parent,
+		Type:         device.Type,
+		Manufacturer: device.Manufacturer,
+		Model:        device.Model,
+		OperatingSystem: OperatingSystem{
+			Family:  device.OperatingSystem.Family,
 			Version: device.OperatingSystem.Version,
 		},
-		LandbManagerPerson: PersonModel{
-			Name:       device.LandbManagerPerson.Name,
-			FirstName:  device.LandbManagerPerson.FirstName,
-			Department: device.LandbManagerPerson.Department,
-			Group:      device.LandbManagerPerson.Group,
+		Manager: Contact{
+			Type:     device.Manager.Type,
+			Person:   device.Manager.Person,
+			EGroup:   device.Manager.EGroup,
+			Reserved: device.Manager.Reserved,
 		},
-		ResponsiblePerson: PersonModel{
-			Name:       device.ResponsiblePerson.Name,
-			FirstName:  device.ResponsiblePerson.FirstName,
-			Department: device.ResponsiblePerson.Department,
-			Group:      device.ResponsiblePerson.Group,
+		Responsible: Contact{
+			Type:     device.Responsible.Type,
+			Person:   device.Responsible.Person,
+			EGroup:   device.Responsible.EGroup,
+			Reserved: device.Responsible.Reserved,
 		},
-		UserPerson: PersonModel{
-			Name:       device.UserPerson.Name,
-			FirstName:  device.UserPerson.FirstName,
-			Department: device.UserPerson.Department,
-			Group:      device.UserPerson.Group,
+		User: Contact{
+			Type:     device.User.Type,
+			Person:   device.User.Person,
+			EGroup:   device.User.EGroup,
+			Reserved: device.User.Reserved,
 		},
-		LastUpdated: types.StringValue(time.Now().Format(time.RFC850)),
+		Version: device.Version,
+		// UpdatedAt: types.StringValue(time.Now().Format(time.RFC850)),
 	}
 
 	diags = resp.State.Set(ctx, state)
@@ -394,18 +521,18 @@ func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest,
 }
 
 func (r *deviceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state DeviceResourceModel
-	diags := req.State.Get(ctx, &state)
+	var deviceState DeviceResource
+	diags := req.State.Get(ctx, &deviceState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.client.DeleteDevice(ctx, state.ID.ValueString())
+	err := r.client.DeleteDevice(deviceState.Name.ValueString(), int(deviceState.Version.ValueInt32()))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting Device",
-			fmt.Sprintf("Could not delete Device %s: %s", state.ID.ValueString(), err.Error()),
+			fmt.Sprintf("Could not delete Device %s: %s", deviceState.ID.ValueString(), err.Error()),
 		)
 		return
 	}
@@ -415,53 +542,94 @@ func (r *deviceResource) ImportState(ctx context.Context, req resource.ImportSta
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-type DeviceModel struct {
-	Description        types.String         `json:"description"`
-	DeviceName         types.String         `json:"device_name"`
-	IPv6Ready          types.Bool           `json:"ipv6_ready"`
-	LandbManagerPerson PersonModel          `json:"landb_manager_person"`
-	Location           LocationModel        `json:"location"`
-	Manufacturer       types.String         `json:"manufacturer"`
-	Model              types.String         `json:"model"`
-	OperatingSystem    OperatingSystemModel `json:"operating_system"`
-	ResponsiblePerson  PersonModel          `json:"responsible_person"`
-	Tag                types.String         `json:"tag"`
-	UserPerson         PersonModel          `json:"user_person"`
+type Device struct {
+	Name              types.String    `tfsdk:"name"`
+	SerialNumber      *types.String   `tfsdk:"serialNumber"`
+	InventoryNumber   *types.String   `tfsdk:"inventoryNumber"`
+	Tag               types.String    `tfsdk:"tag"`
+	Description       *types.String   `tfsdk:"description"`
+	Zone              types.String    `tfsdk:"zone"`
+	DHCPResponse      types.String    `tfsdk:"dhcpResponse"`
+	IPv4InDnsFirewall types.Bool      `tfsdk:"ipv4InDnsAndFirewall"`
+	IPv6InDnsFirewall types.Bool      `tfsdk:"ipv6InDnsAndFirewall"`
+	ManagerLock       types.String    `tfsdk:"managerLock"`
+	Ownership         types.String    `tfsdk:"ownership"`
+	Location          Location        `tfsdk:"location"`
+	Parent            types.String    `tfsdk:"parent"`
+	Type              types.String    `tfsdk:"type"`
+	Manufacturer      types.String    `tfsdk:"manufacturer"`
+	Model             types.String    `tfsdk:"model"`
+	OperatingSystem   OperatingSystem `tfsdk:"operatingSystem"`
+	Manager           Contact         `tfsdk:"manager"`
+	Responsible       Contact         `tfsdk:"responsible"`
+	User              Contact         `tfsdk:"user"`
+	Version           types.Int32     `tfsdk:"version"`
 }
 
-type DeviceResourceModel struct {
-	ID                 types.String         `tfsdk:"id"`
-	Description        types.String         `tfsdk:"description"`
-	DeviceName         types.String         `tfsdk:"device_name"`
-	IPv6Ready          types.Bool           `tfsdk:"ipv6_ready"`
-	LandbManagerPerson PersonModel          `tfsdk:"landb_manager_person"`
-	LastUpdated        types.String         `tfsdk:"last_updated"`
-	Location           LocationModel        `tfsdk:"location"`
-	Manufacturer       types.String         `tfsdk:"manufacturer"`
-	Model              types.String         `tfsdk:"model"`
-	OperatingSystem    OperatingSystemModel `tfsdk:"operating_system"`
-	ResponsiblePerson  PersonModel          `tfsdk:"responsible_person"`
-	Tag                types.String         `tfsdk:"tag"`
-	UserPerson         PersonModel          `tfsdk:"user_person"`
+type DeviceResource struct {
+	ID                types.String    `tfsdk:"id"`
+	Name              types.String    `tfsdk:"name"`
+	SerialNumber      *types.String   `tfsdk:"serialNumber"`
+	InventoryNumber   *types.String   `tfsdk:"inventoryNumber"`
+	Tag               types.String    `tfsdk:"tag"`
+	Description       *types.String   `tfsdk:"description"`
+	Zone              types.String    `tfsdk:"zone"`
+	DHCPResponse      types.String    `tfsdk:"dhcpResponse"`
+	IPv4InDnsFirewall types.Bool      `tfsdk:"ipv4InDnsAndFirewall"`
+	IPv6InDnsFirewall types.Bool      `tfsdk:"ipv6InDnsAndFirewall"`
+	ManagerLock       types.String    `tfsdk:"managerLock"`
+	Ownership         types.String    `tfsdk:"ownership"`
+	Location          Location        `tfsdk:"location"`
+	Parent            types.String    `tfsdk:"parent"`
+	Type              types.String    `tfsdk:"type"`
+	Manufacturer      types.String    `tfsdk:"manufacturer"`
+	Model             types.String    `tfsdk:"model"`
+	OperatingSystem   OperatingSystem `tfsdk:"operatingSystem"`
+	Manager           Contact         `tfsdk:"manager"`
+	Responsible       Contact         `tfsdk:"responsible"`
+	User              Contact         `tfsdk:"user"`
+	Version           types.Int32     `tfsdk:"version"`
+	CreatedAt         time.Time       `tfsdk:"_createdAt"`
+	UpdatedAt         time.Time       `tfsdk:"_updatedAt"`
+	MacAddresses      []types.String  `tfsdk:"_macAddresses"`
 }
 
 type DeviceCreateOptions struct {
 }
 
-type LocationModel struct {
+type Location struct {
 	Building types.String `tfsdk:"building"`
 	Floor    types.String `tfsdk:"floor"`
 	Room     types.String `tfsdk:"room"`
 }
 
-type OperatingSystemModel struct {
-	Name    types.String `tfsdk:"name"`
+type OperatingSystem struct {
+	Family  types.String `tfsdk:"family"`
 	Version types.String `tfsdk:"version"`
 }
 
-type PersonModel struct {
-	Name       types.String `tfsdk:"name"`
-	FirstName  types.String `tfsdk:"first_name"`
+type Person struct {
+	FirstName  types.String `tfsdk:"firstName"`
+	LastName   types.String `tfsdk:"lastName"`
+	Email      types.String `tfsdk:"email"`
+	Username   types.String `tfsdk:"username"`
 	Department types.String `tfsdk:"department"`
 	Group      types.String `tfsdk:"group"`
+}
+
+type Contact struct {
+	Type     types.String `tfsdk:"type"`
+	Person   *Person      `tfsdk:"person"`
+	EGroup   *EGroup      `tfsdk:"egroup"`
+	Reserved *Reserved    `tfsdk:"reserved"`
+}
+
+type EGroup struct {
+	Name  types.String `tfsdk:"name"`
+	Email types.String `tfsdk:"email"`
+}
+
+type Reserved struct {
+	FirstName types.String `tfsdk:"firstName"`
+	LastName  types.String `tfsdk:"lastName"`
 }

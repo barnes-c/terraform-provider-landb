@@ -1,5 +1,9 @@
 package landb
 
+const landbURL = "https://landb.cern.ch/api/"
+const devicesURL= "beta/devices/"
+const setsURL= "beta/sets/"
+
 type Location struct {
 	Building string `json:"building"`
 	Floor    string `json:"floor"`
