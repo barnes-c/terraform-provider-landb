@@ -1,16 +1,18 @@
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
+
 package main
 
 import (
 	"context"
 	"flag"
+	"landb/internal/provider"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
 var (
-	// these will be set by the goreleaser configuration
-	// to appropriate values for the compiled binary.
 	version string = "dev"
 
 	// goreleaser can pass other information to the main package, such as the specific commit
@@ -24,12 +26,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		// NOTE: This is not a typical Terraform Registry provider address,
-		// such as registry.terraform.io/hashicorp/hashicups. This specific
-		// provider address is used in these tutorials in conjunction with a
-		// specific Terraform CLI configuration for manual development testing
-		// of this provider.
-		Address: "hashicorp.com/edu/hashicups",
+		Address: "github.com/barnes-c/terraform-provider-landb",
 		Debug:   debug,
 	}
 
