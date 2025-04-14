@@ -1,3 +1,6 @@
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
+
 package landb
 
 import (
@@ -6,12 +9,23 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-const (
-	authURL = "https://auth.cern.ch/auth/realms/cern/api-access/token"
-)
+const authURL = "https://auth.cern.ch/auth/realms/cern/api-access/token"
 
-func Authenticate(clientID, clientSecret, audience string) (string, error) {
+
+type AuthResponse struct {
+	AccessToken      string `json:"access_token"`
+	TokenType        string `json:"token_type"`
+	ExpiresIn        int    `json:"expires_in"`
+	RefreshExpiresIn int    `json:"refresh_expires_in"`
+	NotBeforePolicy  int    `json:"not-before-policy"`
+	SessionState     string `json:"session_state"`
+	Scope            string `json:"scope"`
+}
+
+func Authenticate(clientID, clientSecret, audience string) (*AuthResponse, error) {
 	client := resty.New()
+
+	var authResp AuthResponse
 
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/x-www-form-urlencoded").
@@ -21,17 +35,16 @@ func Authenticate(clientID, clientSecret, audience string) (string, error) {
 			"client_secret": clientSecret,
 			"audience":      audience,
 		}).
-		SetResult(&AuthResponse{}).
+		SetResult(&authResp).
 		Post(authURL)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to authenticate: %w", err)
+		return nil, fmt.Errorf("authentication request failed: %w", err)
 	}
 
 	if resp.IsError() {
-		return "", fmt.Errorf("authentication error: %s", resp.Status())
+		return nil, fmt.Errorf("authentication error [%d]: %s", resp.StatusCode(), resp.String())
 	}
 
-	authResp := resp.Result().(*AuthResponse)
-	return authResp.AccessToken, nil
+	return &authResp, nil
 }

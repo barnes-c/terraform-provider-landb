@@ -1,3 +1,6 @@
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
+
 package landb
 
 import (
@@ -9,38 +12,24 @@ import (
 type Client struct {
 	apiEndpoint string
 	token       string
-	httpClient  *resty.Client
+	HTTPClient  *resty.Client
 }
 
-func NewClient(authEndpoint, apiEndpoint, clientID, clientSecret string) (*Client, error) {
-	const audience = "production-microservice-landb-rest"
-
-	token, err := authenticate(authEndpoint, clientID, clientSecret, audience)
+func NewClient(apiEndpoint, clientID, clientSecret, audience string) (*Client, error) {
+	authResp, err := Authenticate(clientID, clientSecret, audience)
 	if err != nil {
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
+	client := resty.New().
+		SetBaseURL(apiEndpoint).
+		SetAuthToken(authResp.AccessToken).
+		SetHeader("Accept", "application/json").
+		SetHeader("Content-Type", "application/json")
+
 	return &Client{
 		apiEndpoint: apiEndpoint,
-		token:       token,
-		httpClient:  resty.New(),
+		token:       authResp.AccessToken,
+		HTTPClient:  client,
 	}, nil
-}
-
-// GetDevice retrieves a device by its ID.
-func (c *Client) GetDevice(deviceID string) (*Device, error) {
-	resp, err := c.httpClient.R().
-		SetHeader("Authorization", "Bearer "+c.token).
-		SetResult(&Device{}).
-		Get(fmt.Sprintf("%s/api/v1/devices/%s", c.apiEndpoint, deviceID))
-
-	if err != nil {
-		return nil, fmt.Errorf("request error: %w", err)
-	}
-
-	if resp.IsError() {
-		return nil, fmt.Errorf("api error: %s - %s", resp.Status(), resp.String())
-	}
-
-	return resp.Result().(*Device), nil
 }
