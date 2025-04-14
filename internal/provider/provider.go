@@ -213,7 +213,7 @@ func (p *landbProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *landbProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewDeviceResource,
-		// NewSetResource,
+		NewSetResource,
 	}
 }
 
