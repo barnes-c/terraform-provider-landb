@@ -1,6 +1,6 @@
-# Terraform Provider CertMgr
+# Terraform Provider LanDB
 
-This is a terraform provider for [LanDB](https://gitlab.cern.ch/ai-config-team/ai-tools/-/blob/master/aitools/certmgr.py?ref_type=heads). LanDB is an internal asset management system used at CERN to track and manage information about network-connected devices and their associations with users, locations, and services.
+This is a terraform provider for [LanDB](https://landb.docs.cern.ch/). LanDB is an internal asset management system used at CERN to track and manage information about network-connected devices and their associations with users, locations, and services.
 
 For more information about LanDB see the [LanDB docs](https://landb.docs.cern.ch/)
 
