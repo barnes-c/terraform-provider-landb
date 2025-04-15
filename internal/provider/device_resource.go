@@ -45,6 +45,9 @@ type deviceResourceModel struct {
 	Parent               types.String `tfsdk:"parent"`
 	Manufacturer         types.String `tfsdk:"manufacturer"`
 	Model                types.String `tfsdk:"model"`
+	Manager              contactModel `tfsdk:"manager"`
+	Responsible          contactModel `tfsdk:"responsible"`
+	User                 contactModel `tfsdk:"user"`
 	Version              types.Int64  `tfsdk:"version"`
 	LastUpdated          types.String `tfsdk:"last_updated"`
 }
@@ -128,6 +131,9 @@ func (r *deviceResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "Model of the device.",
 				Optional:    true,
 			},
+			"manager":     contactSchemaBlock("Manager of the device."),
+			"responsible": contactSchemaBlock("Responsible person of the device."),
+			"user":        contactSchemaBlock("User of the device."),
 			"version": schema.Int64Attribute{
 				Description: "Version for optimistic locking.",
 				Computed:    true,
@@ -135,6 +141,49 @@ func (r *deviceResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of last Terraform update.",
 				Computed:    true,
+			},
+		},
+	}
+}
+
+func contactSchemaBlock(description string) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Description: description,
+		Optional:    true,
+		Computed:    true,
+		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				Description: "Type of contact: PERSON, EGROUP, or RESERVED.",
+				Optional:    true,
+				Computed:    true,
+			},
+			"person": schema.SingleNestedAttribute{
+				Optional: true,
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"first_name": schema.StringAttribute{Optional: true, Computed: true},
+					"last_name":  schema.StringAttribute{Optional: true, Computed: true},
+					"email":      schema.StringAttribute{Optional: true, Computed: true},
+					"username":   schema.StringAttribute{Optional: true, Computed: true},
+					"department": schema.StringAttribute{Optional: true, Computed: true},
+					"group":      schema.StringAttribute{Optional: true, Computed: true},
+				},
+			},
+			"egroup": schema.SingleNestedAttribute{
+				Optional: true,
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"name":  schema.StringAttribute{Optional: true, Computed: true},
+					"email": schema.StringAttribute{Optional: true, Computed: true},
+				},
+			},
+			"reserved": schema.SingleNestedAttribute{
+				Optional: true,
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"first_name": schema.StringAttribute{Optional: true, Computed: true},
+					"last_name":  schema.StringAttribute{Optional: true, Computed: true},
+				},
 			},
 		},
 	}
@@ -164,6 +213,9 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 		Parent:               plan.Parent.ValueString(),
 		Manufacturer:         plan.Manufacturer.ValueString(),
 		Model:                plan.Model.ValueString(),
+		Manager:              expandContact(plan.Manager),
+		Responsible:          expandContact(plan.Responsible),
+		User:                 expandContact(plan.User),
 	}
 
 	createdDevice, err := r.client.CreateDevice(device)
@@ -176,81 +228,94 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 	plan.Version = types.Int64Value(int64(createdDevice.Version))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
+	plan.Manager = flattenContact(createdDevice.Manager)
+	plan.Responsible = flattenContact(createdDevice.Responsible)
+	plan.User = flattenContact(createdDevice.User)
+
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *deviceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state deviceResourceModel
-	diags := req.State.Get(ctx, &state)
+	var device deviceResourceModel
+	diags := req.State.Get(ctx, &device)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	device, err := r.client.GetDevice(state.Name.ValueString())
+	devicePtr, err := r.client.GetDevice(device.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading device", "Could not read device: "+err.Error())
 		return
 	}
 
-	state.Version = types.Int64Value(int64(device.Version))
+	device.Version = types.Int64Value(int64(devicePtr.Version))
 
-	diags = resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, &device)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan deviceResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	resp.Diagnostics.AddWarning(
+		"Update Not Supported",
+		"Updating devices is not supported by this provider. No changes were applied.",
+	)
+	// ! Not authorised to edit devices
+	// var plan deviceResourceModel
+	// diags := req.Plan.Get(ctx, &plan)
+	// resp.Diagnostics.Append(diags...)
+	// if resp.Diagnostics.HasError() {
+	// 	return
+	// }
 
-	device := landb.Device{
-		Name:                 plan.Name.ValueString(),
-		SerialNumber:         plan.SerialNumber.ValueString(),
-		InventoryNumber:      plan.InventoryNumber.ValueString(),
-		Tag:                  plan.Tag.ValueString(),
-		Description:          plan.Description.ValueString(),
-		Zone:                 plan.Zone.ValueString(),
-		DHCPResponse:         plan.DHCPResponse.ValueString(),
-		IPv4InDNSAndFirewall: plan.IPv4InDNSAndFirewall.ValueBool(),
-		IPv6InDNSAndFirewall: plan.IPv6InDNSAndFirewall.ValueBool(),
-		ManagerLock:          plan.ManagerLock.ValueString(),
-		Ownership:            plan.Ownership.ValueString(),
-		Type:                 plan.Type.ValueString(),
-		Parent:               plan.Parent.ValueString(),
-		Manufacturer:         plan.Manufacturer.ValueString(),
-		Model:                plan.Model.ValueString(),
-	}
+	// device := landb.Device{
+	// 	Name:                 plan.Name.ValueString(),
+	// 	SerialNumber:         plan.SerialNumber.ValueString(),
+	// 	InventoryNumber:      plan.InventoryNumber.ValueString(),
+	// 	Tag:                  plan.Tag.ValueString(),
+	// 	Description:          plan.Description.ValueString(),
+	// 	Zone:                 plan.Zone.ValueString(),
+	// 	DHCPResponse:         plan.DHCPResponse.ValueString(),
+	// 	IPv4InDNSAndFirewall: plan.IPv4InDNSAndFirewall.ValueBool(),
+	// 	IPv6InDNSAndFirewall: plan.IPv6InDNSAndFirewall.ValueBool(),
+	// 	ManagerLock:          plan.ManagerLock.ValueString(),
+	// 	Ownership:            plan.Ownership.ValueString(),
+	// 	Type:                 plan.Type.ValueString(),
+	// 	Parent:               plan.Parent.ValueString(),
+	// 	Manufacturer:         plan.Manufacturer.ValueString(),
+	// 	Model:                plan.Model.ValueString(),
+	// 	Manager:              expandContact(plan.Manager),
+	// 	Responsible:          expandContact(plan.Responsible),
+	// 	User:                 expandContact(plan.User),
+	// }
 
-	updatedSet, err := r.client.UpdateDevice(plan.Name.ValueString(), device)
-	if err != nil {
-		resp.Diagnostics.AddError("Error updating device", "Could not update device: "+err.Error())
-		return
-	}
+	// updatedSet, err := r.client.UpdateDevice(plan.Name.ValueString(), device)
+	// if err != nil {
+	// 	resp.Diagnostics.AddError("Error updating device", "Could not update device: "+err.Error())
+	// 	return
+	// }
 
-	plan.Version = types.Int64Value(int64(updatedSet.Version))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	// plan.Version = types.Int64Value(int64(updatedSet.Version))
+	// plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
+	// diags = resp.State.Set(ctx, plan)
+	// resp.Diagnostics.Append(diags...)
 }
 
 func (r *deviceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state deviceResourceModel
-	diags := req.State.Get(ctx, &state)
+	var device deviceResourceModel
+	diags := req.State.Get(ctx, &device)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if err := r.client.DeleteSet(state.Name.ValueString(), int(state.Version.ValueInt64())); err != nil {
-		resp.Diagnostics.AddError("Error deleting device", "Could not delete device: "+err.Error())
-		return
-	}
+	// ! Not authorised to delete devices
+	// if err := r.client.DeleteSet(device.Name.ValueString(), int(device.Version.ValueInt64())); err != nil {
+	// 	resp.Diagnostics.AddError("Error deleting device", "Could not delete device: "+err.Error())
+	// 	return
+	// }
 
 	resp.State.RemoveResource(ctx)
 }

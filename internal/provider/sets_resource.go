@@ -33,6 +33,7 @@ type setResourceModel struct {
 	Name                 types.String `tfsdk:"name"`
 	Type                 types.String `tfsdk:"type"`
 	NetworkDomain        types.String `tfsdk:"network_domain"`
+	Responsible          contactModel `tfsdk:"responsible"`
 	Description          types.String `tfsdk:"description"`
 	ProjectURL           types.String `tfsdk:"project_url"`
 	ReceiveNotifications types.Bool   `tfsdk:"receive_notifications"`
@@ -71,6 +72,7 @@ func (r *setResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *
 				Description: "Network domain of the set.",
 				Required:    true,
 			},
+			"responsible": contactSchemaBlock("Responsible person for the set."),
 			"description": schema.StringAttribute{
 				Description: "Description of the set.",
 				Optional:    true,
@@ -110,6 +112,7 @@ func (r *setResource) Create(ctx context.Context, req resource.CreateRequest, re
 		Description:          plan.Description.ValueString(),
 		ProjectURL:           plan.ProjectURL.ValueString(),
 		ReceiveNotifications: plan.ReceiveNotifications.ValueBool(),
+		Responsible:          expandContact(plan.Responsible),
 	}
 
 	createdSet, err := r.client.CreateSet(set)
@@ -118,6 +121,7 @@ func (r *setResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
+	plan.Responsible = flattenContact(createdSet.Responsible)
 	plan.ID = types.StringValue(createdSet.Name)
 	plan.Version = types.Int64Value(int64(createdSet.Version))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
@@ -127,22 +131,22 @@ func (r *setResource) Create(ctx context.Context, req resource.CreateRequest, re
 }
 
 func (r *setResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state setResourceModel
-	diags := req.State.Get(ctx, &state)
+	var set setResourceModel
+	diags := req.State.Get(ctx, &set)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	set, err := r.client.GetSet(state.Name.ValueString())
+	setPtr, err := r.client.GetSet(set.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading set", "Could not read set: "+err.Error())
 		return
 	}
+	set.Responsible = flattenContact(setPtr.Responsible)
+	set.Version = types.Int64Value(int64(setPtr.Version))
 
-	state.Version = types.Int64Value(int64(set.Version))
-
-	diags = resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, &set)
 	resp.Diagnostics.Append(diags...)
 }
 
@@ -161,7 +165,7 @@ func (r *setResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		Description:          plan.Description.ValueString(),
 		ProjectURL:           plan.ProjectURL.ValueString(),
 		ReceiveNotifications: plan.ReceiveNotifications.ValueBool(),
-		Version:              int(plan.Version.ValueInt64()),
+		Responsible:          expandContact(plan.Responsible),
 	}
 
 	updatedSet, err := r.client.UpdateSet(plan.Name.ValueString(), set)
