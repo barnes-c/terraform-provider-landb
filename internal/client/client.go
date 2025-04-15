@@ -10,26 +10,31 @@ import (
 )
 
 type Client struct {
-	apiEndpoint string
-	token       string
-	HTTPClient  *resty.Client
+	HTTPClient   *resty.Client
+	clientID     string
+	clientSecret string
+	audience     string
 }
 
-func NewClient(apiEndpoint, clientID, clientSecret, audience string) (*Client, error) {
-	authResp, err := Authenticate(clientID, clientSecret, audience)
-	if err != nil {
-		return nil, fmt.Errorf("authentication failed: %w", err)
+func NewClient(apiURL, clientID, clientSecret, audience string) (*Client, error) {
+	client := &Client{
+		HTTPClient:   resty.New(),
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		audience:     audience,
 	}
 
-	client := resty.New().
-		SetBaseURL(apiEndpoint).
-		SetAuthToken(authResp.AccessToken).
-		SetHeader("Accept", "application/json").
-		SetHeader("Content-Type", "application/json")
+	client.HTTPClient.OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
+		authResp, err := Authenticate(client.clientID, client.clientSecret, client.audience)
+		if err != nil {
+			return fmt.Errorf("failed to authenticate: %w", err)
+		}
+		r.SetAuthToken(authResp.AccessToken)
 
-	return &Client{
-		apiEndpoint: apiEndpoint,
-		token:       authResp.AccessToken,
-		HTTPClient:  client,
-	}, nil
+		return nil
+	})
+
+	client.HTTPClient.SetDebug(true)
+
+	return client, nil
 }

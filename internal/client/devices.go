@@ -7,6 +7,8 @@ import (
 	"fmt"
 )
 
+const devicesURL = "beta/devices/"
+
 type Device struct {
 	Name                 string          `json:"name"`
 	SerialNumber         string          `json:"serialNumber"`
@@ -31,18 +33,23 @@ type Device struct {
 	Version              int             `json:"version"`
 }
 
-func (c *Client) CreateDevice(device Device) (*Device, error) {
+func (c *Client) CreateDevice(device Device) (Device, error) {
 	url := fmt.Sprintf("%s%s", landbURL, devicesURL)
 
-	resp, err := c.HTTPClient.R().
-		SetBody(device).
-		SetResult(&Device{}).
+	var result []Device
+	_, err := c.HTTPClient.R().
+		SetBody([]Device{device}).
+		SetResult(&result).
 		Post(url)
 	if err != nil {
-		return nil, err
+		return Device{}, err
 	}
 
-	return resp.Result().(*Device), nil
+	if len(result) != 1 {
+		return Device{}, fmt.Errorf("unexpected number of devices returned after create: got %d, want 1", len(result))
+	}
+
+	return result[0], nil
 }
 
 func (c *Client) GetDevice(name string) (*Device, error) {

@@ -7,6 +7,8 @@ import (
 	"fmt"
 )
 
+const setsURL = "beta/sets/"
+
 type Set struct {
 	Name                 string  `json:"name"`
 	Type                 string  `json:"type"`
@@ -18,18 +20,23 @@ type Set struct {
 	Version              int     `json:"version"`
 }
 
-func (c *Client) CreateSet(set Set) (*Set, error) {
+func (c *Client) CreateSet(set Set) (Set, error) {
 	url := fmt.Sprintf("%s%s", landbURL, setsURL)
 
-	resp, err := c.HTTPClient.R().
-		SetBody(set).
-		SetResult(&Set{}).
+	var result []Set
+	_, err := c.HTTPClient.R().
+		SetBody([]Set{set}).
+		SetResult(&result).
 		Post(url)
 	if err != nil {
-		return nil, err
+		return Set{}, err
 	}
 
-	return resp.Result().(*Set), nil
+	if len(result) != 1 {
+		return Set{}, fmt.Errorf("unexpected number of sets returned after create: got %d, want 1", len(result))
+	}
+
+	return result[0], nil
 }
 
 func (c *Client) GetSet(name string) (*Set, error) {

@@ -45,12 +45,12 @@ func TestSetCRUD(t *testing.T) {
 				Group:      "CD",
 			},
 			EGroup: landb.EGroup{
-			Name: "ai-playground",
-			Email: "christopher.barnes@cern.ch",
+				Name:  "ai-playground",
+				Email: "christopher.barnes@cern.ch",
 			},
 			Reserved: landb.Reserved{
 				FirstName: "Christopher",
-				LastName: "Barnes",
+				LastName:  "Barnes",
 			},
 		},
 	}

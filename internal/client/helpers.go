@@ -1,8 +1,9 @@
+// Copyright (c) Christopher Barnes <christopher@barnes.biz>
+// SPDX-License-Identifier: MPL-2.0
+
 package landb
 
 const landbURL = "https://landb.cern.ch/api/"
-const devicesURL = "beta/devices/"
-const setsURL = "beta/sets/"
 
 type Location struct {
 	Building string `json:"building"`
@@ -16,7 +17,7 @@ type OperatingSystem struct {
 }
 
 type Contact struct {
-	Type     string   `json:"type"` // PERSON or EGROUP or RESERVED
+	Type     string   `json:"type"`
 	Person   Person   `json:"person"`
 	EGroup   EGroup   `json:"egroup"`
 	Reserved Reserved `json:"reserved"`
