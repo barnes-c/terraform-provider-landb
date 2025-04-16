@@ -1,9 +1,9 @@
 schema_version = 1
 
 project {
-  license        = "MPL-2.0"
+  license        = "GPL-3.0-or-later"
   copyright_year = 2025
-  copyright_holder = "Christopher Barnes <christopher@barnes.biz>"
+  copyright_holder = "Christopher Barnes <christopher.barnes@cern.ch>"
 
   header_ignore = [
     # examples used within documentation (prose)
