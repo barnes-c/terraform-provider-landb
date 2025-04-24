@@ -30,6 +30,7 @@ Manages a device
 
 - `description` (String)
 - `inventory_number` (String)
+- `location` (Attributes) Physical location of the device. (see [below for nested schema](#nestedatt--location))
 - `manager` (Attributes) Manager of the device (see [below for nested schema](#nestedatt--manager))
 - `manufacturer` (String)
 - `model` (String)
@@ -45,6 +46,16 @@ Manages a device
 - `id` (String) The ID of this resource.
 - `last_updated` (String)
 - `version` (Number)
+
+<a id="nestedatt--location"></a>
+### Nested Schema for `location`
+
+Required:
+
+- `building` (String)
+- `floor` (String)
+- `room` (String)
+
 
 <a id="nestedatt--manager"></a>
 ### Nested Schema for `manager`
