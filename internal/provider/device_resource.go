@@ -17,27 +17,28 @@ import (
 )
 
 type deviceResourceModel struct {
-	ID                   types.String `tfsdk:"id"`
-	Name                 types.String `tfsdk:"name"`
-	SerialNumber         types.String `tfsdk:"serial_number"`
-	InventoryNumber      types.String `tfsdk:"inventory_number"`
-	Tag                  types.String `tfsdk:"tag"`
 	Description          types.String `tfsdk:"description"`
-	Zone                 types.String `tfsdk:"zone"`
 	DHCPResponse         types.String `tfsdk:"dhcp_response"`
+	ID                   types.String `tfsdk:"id"`
+	InventoryNumber      types.String `tfsdk:"inventory_number"`
 	IPv4InDNSAndFirewall types.Bool   `tfsdk:"ipv4_in_dns_and_firewall"`
 	IPv6InDNSAndFirewall types.Bool   `tfsdk:"ipv6_in_dns_and_firewall"`
+	LastUpdated          types.String `tfsdk:"last_updated"`
+	Manager              types.Object `tfsdk:"manager"`
 	ManagerLock          types.String `tfsdk:"manager_lock"`
-	Ownership            types.String `tfsdk:"ownership"`
-	Type                 types.String `tfsdk:"type"`
-	Parent               types.String `tfsdk:"parent"`
 	Manufacturer         types.String `tfsdk:"manufacturer"`
 	Model                types.String `tfsdk:"model"`
-	Manager              types.Object `tfsdk:"manager"`
+	Name                 types.String `tfsdk:"name"`
+	OperatingSystem      types.Object `tfsdk:"operating_system"`
+	Ownership            types.String `tfsdk:"ownership"`
+	Parent               types.String `tfsdk:"parent"`
 	Responsible          types.Object `tfsdk:"responsible"`
+	SerialNumber         types.String `tfsdk:"serial_number"`
+	Tag                  types.String `tfsdk:"tag"`
+	Type                 types.String `tfsdk:"type"`
 	User                 types.Object `tfsdk:"user"`
 	Version              types.Int64  `tfsdk:"version"`
-	LastUpdated          types.String `tfsdk:"last_updated"`
+	Zone                 types.String `tfsdk:"zone"`
 }
 
 type deviceResource struct {
@@ -62,26 +63,34 @@ func (r *deviceResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"name":                     schema.StringAttribute{Required: true},
-			"serial_number":            schema.StringAttribute{Optional: true},
-			"inventory_number":         schema.StringAttribute{Optional: true},
-			"tag":                      schema.StringAttribute{Optional: true},
 			"description":              schema.StringAttribute{Optional: true},
-			"zone":                     schema.StringAttribute{Required: true},
 			"dhcp_response":            schema.StringAttribute{Required: true},
+			"inventory_number":         schema.StringAttribute{Optional: true},
 			"ipv4_in_dns_and_firewall": schema.BoolAttribute{Required: true},
 			"ipv6_in_dns_and_firewall": schema.BoolAttribute{Required: true},
+			"last_updated":             schema.StringAttribute{Computed: true},
 			"manager_lock":             schema.StringAttribute{Required: true},
-			"ownership":                schema.StringAttribute{Required: true},
-			"type":                     schema.StringAttribute{Required: true},
-			"parent":                   schema.StringAttribute{Optional: true},
+			"manager":                  contactSchemaBlock("Manager of the device"),
 			"manufacturer":             schema.StringAttribute{Optional: true},
 			"model":                    schema.StringAttribute{Optional: true},
-			"manager":                  contactSchemaBlock("Manager of the device"),
-			"responsible":              contactSchemaBlock("Responsible person of the device"),
-			"user":                     contactSchemaBlock("User of the device"),
-			"version":                  schema.Int64Attribute{Computed: true},
-			"last_updated":             schema.StringAttribute{Computed: true},
+			"name":                     schema.StringAttribute{Required: true},
+			"operating_system": schema.SingleNestedAttribute{
+				Optional:    true,
+				Description: "Operating system of the device",
+				Attributes: map[string]schema.Attribute{
+					"name":    schema.StringAttribute{Required: true},
+					"version": schema.StringAttribute{Optional: true},
+				},
+			},
+			"ownership":     schema.StringAttribute{Required: true},
+			"parent":        schema.StringAttribute{Optional: true},
+			"responsible":   contactSchemaBlock("Responsible person of the device"),
+			"serial_number": schema.StringAttribute{Optional: true},
+			"tag":           schema.StringAttribute{Optional: true},
+			"type":          schema.StringAttribute{Required: true},
+			"user":          contactSchemaBlock("User of the device"),
+			"version":       schema.Int64Attribute{Computed: true},
+			"zone":          schema.StringAttribute{Required: true},
 		},
 	}
 }
@@ -115,25 +124,32 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	os, osDiags := expandOperatingSystem(ctx, plan.OperatingSystem)
+	resp.Diagnostics.Append(osDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	device := landb.Device{
-		Name:                 plan.Name.ValueString(),
-		SerialNumber:         plan.SerialNumber.ValueString(),
-		InventoryNumber:      plan.InventoryNumber.ValueString(),
-		Tag:                  plan.Tag.ValueString(),
 		Description:          plan.Description.ValueString(),
-		Zone:                 plan.Zone.ValueString(),
 		DHCPResponse:         plan.DHCPResponse.ValueString(),
+		InventoryNumber:      plan.InventoryNumber.ValueString(),
 		IPv4InDNSAndFirewall: plan.IPv4InDNSAndFirewall.ValueBool(),
 		IPv6InDNSAndFirewall: plan.IPv6InDNSAndFirewall.ValueBool(),
+		Manager:              manager,
 		ManagerLock:          plan.ManagerLock.ValueString(),
-		Ownership:            plan.Ownership.ValueString(),
-		Type:                 plan.Type.ValueString(),
-		Parent:               plan.Parent.ValueString(),
 		Manufacturer:         plan.Manufacturer.ValueString(),
 		Model:                plan.Model.ValueString(),
-		Manager:              manager,
+		Name:                 plan.Name.ValueString(),
+		OperatingSystem:      os,
+		Ownership:            plan.Ownership.ValueString(),
+		Parent:               plan.Parent.ValueString(),
 		Responsible:          responsible,
+		SerialNumber:         plan.SerialNumber.ValueString(),
+		Tag:                  plan.Tag.ValueString(),
+		Type:                 plan.Type.ValueString(),
 		User:                 user,
+		Zone:                 plan.Zone.ValueString(),
 	}
 
 	created, err := r.client.CreateDevice(device)
@@ -148,6 +164,7 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 	plan.Manager = flattenContactObject(created.Manager)
 	plan.Responsible = flattenContactObject(created.Responsible)
 	plan.User = flattenContactObject(created.User)
+	plan.OperatingSystem = flattenOperatingSystem(created.OperatingSystem)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
@@ -196,6 +213,12 @@ func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	os, osDiags := expandOperatingSystem(ctx, plan.OperatingSystem)
+	resp.Diagnostics.Append(osDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	device := landb.Device{
 		Name:                 plan.Name.ValueString(),
 		SerialNumber:         plan.SerialNumber.ValueString(),
@@ -215,6 +238,7 @@ func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Manager:              manager,
 		Responsible:          responsible,
 		User:                 user,
+		OperatingSystem:      os,
 	}
 
 	updated, err := r.client.UpdateDevice(plan.Name.ValueString(), device)

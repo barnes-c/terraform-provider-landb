@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -200,4 +201,44 @@ func flattenContactObject(c landb.Contact) types.Object {
 
 	obj, _ := types.ObjectValue(contactAttrTypes, elems)
 	return obj
+}
+
+func operatingSystemAttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"family":  types.StringType,
+		"version": types.StringType,
+	}
+}
+
+func flattenOperatingSystem(os landb.OperatingSystem) types.Object {
+	return types.ObjectValueMust(
+		operatingSystemAttrTypes(),
+		map[string]attr.Value{
+			"family":  types.StringValue(os.Family),
+			"version": types.StringValue(os.Version),
+		},
+	)
+}
+
+func expandOperatingSystem(ctx context.Context, obj types.Object) (landb.OperatingSystem, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	var out landb.OperatingSystem
+
+	if obj.IsNull() || obj.IsUnknown() {
+		return out, diags
+	}
+
+	attrs := obj.Attributes()
+
+	var family types.String
+	diags.Append(tfsdk.ValueAs(ctx, attrs["family"], &family)...)
+	out.Family = family.ValueString()
+
+	var version types.String
+	diags.Append(tfsdk.ValueAs(ctx, attrs["version"], &version)...)
+	out.Version = version.ValueString()
+
+	out.Version = version.ValueString()
+
+	return out, diags
 }
