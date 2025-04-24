@@ -1,12 +1,12 @@
 // Copyright (c) Christopher Barnes <christopher.barnes@cern.ch>
 // SPDX-License-Identifier: GPL-3.0-or-later
-
 package provider
 
 import (
 	"context"
-	"fmt"
 	"time"
+
+	landb "landb/internal/client"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,26 +14,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	landb "landb/internal/client"
 )
-
-var (
-	_ resource.Resource                = &setResource{}
-	_ resource.ResourceWithConfigure   = &setResource{}
-	_ resource.ResourceWithImportState = &setResource{}
-)
-
-func NewSetResource() resource.Resource {
-	return &setResource{}
-}
 
 type setResourceModel struct {
 	ID                   types.String `tfsdk:"id"`
 	Name                 types.String `tfsdk:"name"`
 	Type                 types.String `tfsdk:"type"`
 	NetworkDomain        types.String `tfsdk:"network_domain"`
-	Responsible          contactModel `tfsdk:"responsible"`
+	Responsible          types.Object `tfsdk:"responsible"`
 	Description          types.String `tfsdk:"description"`
 	ProjectURL           types.String `tfsdk:"project_url"`
 	ReceiveNotifications types.Bool   `tfsdk:"receive_notifications"`
@@ -45,173 +33,141 @@ type setResource struct {
 	client *landb.Client
 }
 
+func NewSetResource() resource.Resource {
+	return &setResource{}
+}
+
 func (r *setResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_set"
 }
 
 func (r *setResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a set.",
+		Description: "Manages a set",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Name of the set.",
-				Computed:    true,
+				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"name": schema.StringAttribute{
-				Description: "Name of the set.",
-				Required:    true,
-			},
-			"type": schema.StringAttribute{
-				Description: "Type of the set (e.g., INTERDOMAIN).",
-				Required:    true,
-			},
-			"network_domain": schema.StringAttribute{
-				Description: "Network domain of the set.",
-				Required:    true,
-			},
-			"responsible": contactSchemaBlock("Responsible person for the set."),
-			"description": schema.StringAttribute{
-				Description: "Description of the set.",
-				Optional:    true,
-			},
-			"project_url": schema.StringAttribute{
-				Description: "Project URL associated with the set.",
-				Optional:    true,
-			},
-			"receive_notifications": schema.BoolAttribute{
-				Description: "Whether to receive notifications.",
-				Optional:    true,
-			},
-			"version": schema.Int64Attribute{
-				Description: "Version of the set for optimistic locking.",
-				Computed:    true,
-			},
-			"last_updated": schema.StringAttribute{
-				Description: "Timestamp of the last Terraform update of the set.",
-				Computed:    true,
-			},
+			"name":                  schema.StringAttribute{Required: true},
+			"type":                  schema.StringAttribute{Required: true},
+			"network_domain":        schema.StringAttribute{Required: true},
+			"responsible":           contactSchemaBlock("Responsible entity for the set"),
+			"description":           schema.StringAttribute{Optional: true},
+			"project_url":           schema.StringAttribute{Optional: true},
+			"receive_notifications": schema.BoolAttribute{Optional: true},
+			"version":               schema.Int64Attribute{Computed: true},
+			"last_updated":          schema.StringAttribute{Computed: true},
 		},
+	}
+}
+
+func (r *setResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if client, ok := req.ProviderData.(*landb.Client); ok {
+		r.client = client
 	}
 }
 
 func (r *setResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan setResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	set := landb.Set{
+	responsible, responsibleDiags := expandContactObject(ctx, plan.Responsible)
+	resp.Diagnostics.Append(responsibleDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	setObj := landb.Set{
 		Name:                 plan.Name.ValueString(),
 		Type:                 plan.Type.ValueString(),
 		NetworkDomain:        plan.NetworkDomain.ValueString(),
 		Description:          plan.Description.ValueString(),
 		ProjectURL:           plan.ProjectURL.ValueString(),
 		ReceiveNotifications: plan.ReceiveNotifications.ValueBool(),
-		Responsible:          expandContact(plan.Responsible),
+		Responsible:          responsible,
 	}
 
-	createdSet, err := r.client.CreateSet(set)
+	created, err := r.client.CreateSet(setObj)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating set", "Could not create set: "+err.Error())
+		resp.Diagnostics.AddError("Error creating set", err.Error())
 		return
 	}
 
-	plan.Responsible = flattenContact(createdSet.Responsible)
-	plan.ID = types.StringValue(createdSet.Name)
-	plan.Version = types.Int64Value(int64(createdSet.Version))
+	plan.ID = types.StringValue(created.Name)
+	plan.Version = types.Int64Value(int64(created.Version))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	plan.Responsible = flattenContactObject(created.Responsible)
 
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (r *setResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var set setResourceModel
-	diags := req.State.Get(ctx, &set)
-	resp.Diagnostics.Append(diags...)
+	var state setResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	setPtr, err := r.client.GetSet(set.Name.ValueString())
+	ptr, err := r.client.GetSet(state.Name.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading set", "Could not read set: "+err.Error())
+		resp.Diagnostics.AddError("Error reading set", err.Error())
 		return
 	}
-	set.Responsible = flattenContact(setPtr.Responsible)
-	set.Version = types.Int64Value(int64(setPtr.Version))
 
-	diags = resp.State.Set(ctx, &set)
-	resp.Diagnostics.Append(diags...)
+	state.Version = types.Int64Value(int64(ptr.Version))
+	state.Responsible = flattenContactObject(ptr.Responsible)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *setResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan setResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	set := landb.Set{
+	responsible, responsibleDiags := expandContactObject(ctx, plan.Responsible)
+	resp.Diagnostics.Append(responsibleDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	setObj := landb.Set{
 		Name:                 plan.Name.ValueString(),
 		Type:                 plan.Type.ValueString(),
 		NetworkDomain:        plan.NetworkDomain.ValueString(),
 		Description:          plan.Description.ValueString(),
 		ProjectURL:           plan.ProjectURL.ValueString(),
 		ReceiveNotifications: plan.ReceiveNotifications.ValueBool(),
-		Responsible:          expandContact(plan.Responsible),
+		Responsible:          responsible,
 	}
 
-	updatedSet, err := r.client.UpdateSet(plan.Name.ValueString(), set)
+	updated, err := r.client.UpdateSet(plan.Name.ValueString(), setObj)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating set", "Could not update set: "+err.Error())
+		resp.Diagnostics.AddError("Error updating set", err.Error())
 		return
 	}
 
-	plan.Version = types.Int64Value(int64(updatedSet.Version))
+	plan.Version = types.Int64Value(int64(updated.Version))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (r *setResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state setResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	if err := r.client.DeleteSet(state.Name.ValueString(), int(state.Version.ValueInt64())); err != nil {
-		resp.Diagnostics.AddError("Error deleting set", "Could not delete set: "+err.Error())
-		return
-	}
-
+	_ = r.client.DeleteSet(state.Name.ValueString(), int(state.Version.ValueInt64()))
 	resp.State.RemoveResource(ctx)
-}
-
-func (r *setResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	client, ok := req.ProviderData.(*landb.Client)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected client type",
-			fmt.Sprintf("Expected *landb.Client, got: %T", req.ProviderData),
-		)
-		return
-	}
-
-	r.client = client
 }
 
 func (r *setResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

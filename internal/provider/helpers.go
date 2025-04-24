@@ -1,106 +1,202 @@
-// Copyright (c) Christopher Barnes <christopher.barnes@cern.ch>
-// SPDX-License-Identifier: GPL-3.0-or-later
-
 package provider
 
 import (
+	"context"
+
 	landb "landb/internal/client"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func expandContact(m contactModel) landb.Contact {
-	if m.Type.IsNull() || m.Type.IsUnknown() {
-		return landb.Contact{}
+var (
+	personAttrTypes = map[string]attr.Type{
+		"first_name": types.StringType,
+		"last_name":  types.StringType,
+		"email":      types.StringType,
+		"username":   types.StringType,
+		"department": types.StringType,
+		"group":      types.StringType,
 	}
-
-	contact := landb.Contact{
-		Type: m.Type.ValueString(),
+	egroupAttrTypes = map[string]attr.Type{
+		"name":  types.StringType,
+		"email": types.StringType,
 	}
+	reservedAttrTypes = map[string]attr.Type{
+		"first_name": types.StringType,
+		"last_name":  types.StringType,
+	}
+	contactAttrTypes = map[string]attr.Type{
+		"type":     types.StringType,
+		"person":   types.ObjectType{AttrTypes: personAttrTypes},
+		"egroup":   types.ObjectType{AttrTypes: egroupAttrTypes},
+		"reserved": types.ObjectType{AttrTypes: reservedAttrTypes},
+	}
+)
 
-	switch contact.Type {
+func contactSchemaBlock(description string) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Description: description,
+		Optional:    true,
+		Computed:    true,
+		PlanModifiers: []planmodifier.Object{
+			objectplanmodifier.UseStateForUnknown(),
+		},
+		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				Description: "One of PERSON, EGROUP, or RESERVED",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"person": schema.SingleNestedAttribute{
+				Description: "Details if type == PERSON",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"first_name": schema.StringAttribute{Optional: true, Computed: true},
+					"last_name":  schema.StringAttribute{Optional: true, Computed: true},
+					"email":      schema.StringAttribute{Optional: true, Computed: true},
+					"username":   schema.StringAttribute{Optional: true, Computed: true},
+					"department": schema.StringAttribute{Optional: true, Computed: true},
+					"group":      schema.StringAttribute{Optional: true, Computed: true},
+				},
+			},
+			"egroup": schema.SingleNestedAttribute{
+				Description: "Details if type == EGROUP",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"name":  schema.StringAttribute{Optional: true, Computed: true},
+					"email": schema.StringAttribute{Optional: true, Computed: true},
+				},
+			},
+			"reserved": schema.SingleNestedAttribute{
+				Description: "Details if type == RESERVED",
+				Optional:    true,
+				Computed:    true,
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				Attributes: map[string]schema.Attribute{
+					"first_name": schema.StringAttribute{Optional: true, Computed: true},
+					"last_name":  schema.StringAttribute{Optional: true, Computed: true},
+				},
+			},
+		},
+	}
+}
+
+// expandContactObject converts a types.Object into a landb.Contact
+func expandContactObject(ctx context.Context, o types.Object) (landb.Contact, diag.Diagnostics) {
+	var diags diag.Diagnostics
+  
+	if o.IsNull() || o.IsUnknown() {
+	  return landb.Contact{}, diags
+	}
+  
+	elems := o.Attributes()
+	typRaw, ok := elems["type"]
+	if !ok {
+	  diags.AddError("Bad contact block", "missing \"type\" field")
+	  tflog.Error(ctx, "expandContactObject: missing type", map[string]interface{}{})
+	  return landb.Contact{}, diags
+	}
+	typ := typRaw.(types.String).ValueString()
+
+	contact := landb.Contact{Type: typ}
+
+	switch typ {
 	case "PERSON":
-		if m.Person != nil {
+		pRaw := elems["person"].(types.Object)
+		if !pRaw.IsNull() && !pRaw.IsUnknown() {
+			p := pRaw.Attributes()
 			contact.Person = landb.Person{
-				FirstName:  m.Person.FirstName.ValueString(),
-				LastName:   m.Person.LastName.ValueString(),
-				Email:      m.Person.Email.ValueString(),
-				Username:   m.Person.Username.ValueString(),
-				Department: m.Person.Department.ValueString(),
-				Group:      m.Person.Group.ValueString(),
+				FirstName:  p["first_name"].(types.String).ValueString(),
+				LastName:   p["last_name"].(types.String).ValueString(),
+				Email:      p["email"].(types.String).ValueString(),
+				Username:   p["username"].(types.String).ValueString(),
+				Department: p["department"].(types.String).ValueString(),
+				Group:      p["group"].(types.String).ValueString(),
 			}
 		}
 	case "EGROUP":
-		if m.EGroup != nil {
+		eRaw := elems["egroup"].(types.Object)
+		if !eRaw.IsNull() && !eRaw.IsUnknown() {
+			e := eRaw.Attributes()
 			contact.EGroup = landb.EGroup{
-				Name:  m.EGroup.Name.ValueString(),
-				Email: m.EGroup.Email.ValueString(),
+				Name:  e["name"].(types.String).ValueString(),
+				Email: e["email"].(types.String).ValueString(),
 			}
 		}
 	case "RESERVED":
-		if m.Reserved != nil {
+		rRaw := elems["reserved"].(types.Object)
+		if !rRaw.IsNull() && !rRaw.IsUnknown() {
+			r := rRaw.Attributes()
 			contact.Reserved = landb.Reserved{
-				FirstName: m.Reserved.FirstName.ValueString(),
-				LastName:  m.Reserved.LastName.ValueString(),
+				FirstName: r["first_name"].(types.String).ValueString(),
+				LastName:  r["last_name"].(types.String).ValueString(),
 			}
 		}
 	}
 
-	return contact
+	return contact, diags
 }
 
-func flattenContact(c landb.Contact) contactModel {
-	model := contactModel{
-		Type: types.StringValue(c.Type),
+// flattenContactObject converts a landb.Contact back into a types.Object
+func flattenContactObject(c landb.Contact) types.Object {
+	elems := map[string]attr.Value{
+		"type": types.StringValue(c.Type),
 	}
 
-	switch c.Type {
-	case "PERSON":
-		model.Person = &personModel{
-			FirstName:  types.StringValue(c.Person.FirstName),
-			LastName:   types.StringValue(c.Person.LastName),
-			Email:      types.StringValue(c.Person.Email),
-			Username:   types.StringValue(c.Person.Username),
-			Department: types.StringValue(c.Person.Department),
-			Group:      types.StringValue(c.Person.Group),
-		}
-	case "EGROUP":
-		model.EGroup = &egroupModel{
-			Name:  types.StringValue(c.EGroup.Name),
-			Email: types.StringValue(c.EGroup.Email),
-		}
-	case "RESERVED":
-		model.Reserved = &reservedModel{
-			FirstName: types.StringValue(c.Reserved.FirstName),
-			LastName:  types.StringValue(c.Reserved.LastName),
-		}
+	if c.Type == "PERSON" {
+		obj, _ := types.ObjectValue(personAttrTypes, map[string]attr.Value{
+			"first_name": types.StringValue(c.Person.FirstName),
+			"last_name":  types.StringValue(c.Person.LastName),
+			"email":      types.StringValue(c.Person.Email),
+			"username":   types.StringValue(c.Person.Username),
+			"department": types.StringValue(c.Person.Department),
+			"group":      types.StringValue(c.Person.Group),
+		})
+		elems["person"] = obj
+	} else {
+		elems["person"] = types.ObjectNull(personAttrTypes)
 	}
 
-	return model
-}
+	if c.Type == "EGROUP" {
+		obj, _ := types.ObjectValue(egroupAttrTypes, map[string]attr.Value{
+			"name":  types.StringValue(c.EGroup.Name),
+			"email": types.StringValue(c.EGroup.Email),
+		})
+		elems["egroup"] = obj
+	} else {
+		elems["egroup"] = types.ObjectNull(egroupAttrTypes)
+	}
 
-type contactModel struct {
-	Type     types.String   `tfsdk:"type"`
-	Person   *personModel   `tfsdk:"person"`
-	EGroup   *egroupModel   `tfsdk:"egroup"`
-	Reserved *reservedModel `tfsdk:"reserved"`
-}
+	if c.Type == "RESERVED" {
+		obj, _ := types.ObjectValue(reservedAttrTypes, map[string]attr.Value{
+			"first_name": types.StringValue(c.Reserved.FirstName),
+			"last_name":  types.StringValue(c.Reserved.LastName),
+		})
+		elems["reserved"] = obj
+	} else {
+		elems["reserved"] = types.ObjectNull(reservedAttrTypes)
+	}
 
-type personModel struct {
-	FirstName  types.String `tfsdk:"first_name"`
-	LastName   types.String `tfsdk:"last_name"`
-	Email      types.String `tfsdk:"email"`
-	Username   types.String `tfsdk:"username"`
-	Department types.String `tfsdk:"department"`
-	Group      types.String `tfsdk:"group"`
-}
-
-type egroupModel struct {
-	Name  types.String `tfsdk:"name"`
-	Email types.String `tfsdk:"email"`
-}
-
-type reservedModel struct {
-	FirstName types.String `tfsdk:"first_name"`
-	LastName  types.String `tfsdk:"last_name"`
+	obj, _ := types.ObjectValue(contactAttrTypes, elems)
+	return obj
 }
