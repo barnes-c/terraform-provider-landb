@@ -93,7 +93,7 @@ Optional:
 
 Required:
 
-- `name` (String)
+- `family` (String)
 
 Optional:
 

@@ -78,7 +78,7 @@ func (r *deviceResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:    true,
 				Description: "Operating system of the device",
 				Attributes: map[string]schema.Attribute{
-					"name":    schema.StringAttribute{Required: true},
+					"family":  schema.StringAttribute{Required: true},
 					"version": schema.StringAttribute{Optional: true},
 				},
 			},
