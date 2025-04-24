@@ -104,20 +104,19 @@ func contactSchemaBlock(description string) schema.SingleNestedAttribute {
 	}
 }
 
-// expandContactObject converts a types.Object into a landb.Contact
 func expandContactObject(ctx context.Context, o types.Object) (landb.Contact, diag.Diagnostics) {
 	var diags diag.Diagnostics
-  
+
 	if o.IsNull() || o.IsUnknown() {
-	  return landb.Contact{}, diags
+		return landb.Contact{}, diags
 	}
-  
+
 	elems := o.Attributes()
 	typRaw, ok := elems["type"]
 	if !ok {
-	  diags.AddError("Bad contact block", "missing \"type\" field")
-	  tflog.Error(ctx, "expandContactObject: missing type", map[string]interface{}{})
-	  return landb.Contact{}, diags
+		diags.AddError("Bad contact block", "missing \"type\" field")
+		tflog.Error(ctx, "expandContactObject: missing type", map[string]interface{}{})
+		return landb.Contact{}, diags
 	}
 	typ := typRaw.(types.String).ValueString()
 
@@ -160,7 +159,6 @@ func expandContactObject(ctx context.Context, o types.Object) (landb.Contact, di
 	return contact, diags
 }
 
-// flattenContactObject converts a landb.Contact back into a types.Object
 func flattenContactObject(c landb.Contact) types.Object {
 	elems := map[string]attr.Value{
 		"type": types.StringValue(c.Type),
