@@ -24,6 +24,7 @@ type deviceResourceModel struct {
 	IPv4InDNSAndFirewall types.Bool   `tfsdk:"ipv4_in_dns_and_firewall"`
 	IPv6InDNSAndFirewall types.Bool   `tfsdk:"ipv6_in_dns_and_firewall"`
 	LastUpdated          types.String `tfsdk:"last_updated"`
+	Location             types.Object `tfsdk:"location"`
 	Manager              types.Object `tfsdk:"manager"`
 	ManagerLock          types.String `tfsdk:"manager_lock"`
 	Manufacturer         types.String `tfsdk:"manufacturer"`
@@ -69,6 +70,15 @@ func (r *deviceResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"ipv4_in_dns_and_firewall": schema.BoolAttribute{Required: true},
 			"ipv6_in_dns_and_firewall": schema.BoolAttribute{Required: true},
 			"last_updated":             schema.StringAttribute{Computed: true},
+			"location": schema.SingleNestedAttribute{
+                Optional:    true,
+                Attributes: map[string]schema.Attribute{
+                    "building": schema.StringAttribute{Required: true},
+                    "floor":    schema.StringAttribute{Required: true},
+                    "room":     schema.StringAttribute{Required: true},
+                },
+                Description: "Physical location of the device.",
+            },
 			"manager_lock":             schema.StringAttribute{Required: true},
 			"manager":                  contactSchemaBlock("Manager of the device"),
 			"manufacturer":             schema.StringAttribute{Optional: true},
@@ -108,6 +118,11 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	location, locationDiags := expandLocation(ctx, plan.Location)
+	resp.Diagnostics.Append(locationDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	manager, managerDiags := expandContactObject(ctx, plan.Responsible)
 	resp.Diagnostics.Append(managerDiags...)
 	if resp.Diagnostics.HasError() {
@@ -123,7 +138,6 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	os, osDiags := expandOperatingSystem(ctx, plan.OperatingSystem)
 	resp.Diagnostics.Append(osDiags...)
 	if resp.Diagnostics.HasError() {
@@ -136,6 +150,7 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 		InventoryNumber:      plan.InventoryNumber.ValueString(),
 		IPv4InDNSAndFirewall: plan.IPv4InDNSAndFirewall.ValueBool(),
 		IPv6InDNSAndFirewall: plan.IPv6InDNSAndFirewall.ValueBool(),
+		Location:             location,
 		Manager:              manager,
 		ManagerLock:          plan.ManagerLock.ValueString(),
 		Manufacturer:         plan.Manufacturer.ValueString(),
@@ -161,6 +176,7 @@ func (r *deviceResource) Create(ctx context.Context, req resource.CreateRequest,
 	plan.ID = types.StringValue(created.Name)
 	plan.Version = types.Int64Value(int64(created.Version))
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
+	plan.Location = flattenLocation(created.Location)
 	plan.Manager = flattenContactObject(created.Manager)
 	plan.Responsible = flattenContactObject(created.Responsible)
 	plan.User = flattenContactObject(created.User)
@@ -183,9 +199,11 @@ func (r *deviceResource) Read(ctx context.Context, req resource.ReadRequest, res
 	}
 
 	state.Version = types.Int64Value(int64(devicePtr.Version))
+	state.Location = flattenLocation(devicePtr.Location)
 	state.Manager = flattenContactObject(devicePtr.Manager)
 	state.Responsible = flattenContactObject(devicePtr.Responsible)
 	state.User = flattenContactObject(devicePtr.User)
+	state.OperatingSystem = flattenOperatingSystem(devicePtr.OperatingSystem)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -197,6 +215,11 @@ func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	location, locationDiags := expandLocation(ctx, plan.Location)
+	resp.Diagnostics.Append(locationDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	manager, managerDiags := expandContactObject(ctx, plan.Responsible)
 	resp.Diagnostics.Append(managerDiags...)
 	if resp.Diagnostics.HasError() {
@@ -212,7 +235,6 @@ func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
 	os, osDiags := expandOperatingSystem(ctx, plan.OperatingSystem)
 	resp.Diagnostics.Append(osDiags...)
 	if resp.Diagnostics.HasError() {
@@ -220,25 +242,26 @@ func (r *deviceResource) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	device := landb.Device{
-		Name:                 plan.Name.ValueString(),
-		SerialNumber:         plan.SerialNumber.ValueString(),
-		InventoryNumber:      plan.InventoryNumber.ValueString(),
-		Tag:                  plan.Tag.ValueString(),
 		Description:          plan.Description.ValueString(),
-		Zone:                 plan.Zone.ValueString(),
 		DHCPResponse:         plan.DHCPResponse.ValueString(),
+		InventoryNumber:      plan.InventoryNumber.ValueString(),
 		IPv4InDNSAndFirewall: plan.IPv4InDNSAndFirewall.ValueBool(),
 		IPv6InDNSAndFirewall: plan.IPv6InDNSAndFirewall.ValueBool(),
+		Location:             location,
+		Manager:              manager,
 		ManagerLock:          plan.ManagerLock.ValueString(),
-		Ownership:            plan.Ownership.ValueString(),
-		Type:                 plan.Type.ValueString(),
-		Parent:               plan.Parent.ValueString(),
 		Manufacturer:         plan.Manufacturer.ValueString(),
 		Model:                plan.Model.ValueString(),
-		Manager:              manager,
-		Responsible:          responsible,
-		User:                 user,
+		Name:                 plan.Name.ValueString(),
 		OperatingSystem:      os,
+		Ownership:            plan.Ownership.ValueString(),
+		Parent:               plan.Parent.ValueString(),
+		Responsible:          responsible,
+		SerialNumber:         plan.SerialNumber.ValueString(),
+		Tag:                  plan.Tag.ValueString(),
+		Type:                 plan.Type.ValueString(),
+		User:                 user,
+		Zone:                 plan.Zone.ValueString(),
 	}
 
 	updated, err := r.client.UpdateDevice(plan.Name.ValueString(), device)

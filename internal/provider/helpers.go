@@ -242,3 +242,47 @@ func expandOperatingSystem(ctx context.Context, obj types.Object) (landb.Operati
 
 	return out, diags
 }
+
+func locationAttrTypes() map[string]attr.Type {
+    return map[string]attr.Type{
+        "building": types.StringType,
+        "floor":    types.StringType,
+        "room":     types.StringType,
+    }
+}
+
+func flattenLocation(location landb.Location) types.Object {
+    return types.ObjectValueMust(
+        locationAttrTypes(),
+        map[string]attr.Value{
+            "building": types.StringValue(location.Building),
+            "floor":    types.StringValue(location.Floor),
+            "room":     types.StringValue(location.Room),
+        },
+    )
+}
+
+func expandLocation(ctx context.Context, obj types.Object) (landb.Location, diag.Diagnostics) {
+    var diags diag.Diagnostics
+    var out landb.Location
+
+    if obj.IsNull() || obj.IsUnknown() {
+        return out, diags
+    }
+
+    attrs := obj.Attributes()
+
+    var b types.String
+    diags.Append(tfsdk.ValueAs(ctx, attrs["building"], &b)...)
+    out.Building = b.ValueString()
+
+    var f types.String
+    diags.Append(tfsdk.ValueAs(ctx, attrs["floor"], &f)...)
+    out.Floor = f.ValueString()
+
+    var r types.String
+    diags.Append(tfsdk.ValueAs(ctx, attrs["room"], &r)...)
+    out.Room = r.ValueString()
+
+    return out, diags
+}
