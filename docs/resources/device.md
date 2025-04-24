@@ -3,12 +3,12 @@
 page_title: "landb_device Resource - landb"
 subcategory: ""
 description: |-
-  Manages a device.
+  Manages a device
 ---
 
 # landb_device (Resource)
 
-Manages a device.
+Manages a device
 
 
 
@@ -17,43 +17,43 @@ Manages a device.
 
 ### Required
 
-- `dhcp_response` (String) DHCP Response behavior (e.g., ALWAYS).
-- `ipv4_in_dns_and_firewall` (Boolean) Whether IPv4 is in DNS and Firewall.
-- `ipv6_in_dns_and_firewall` (Boolean) Whether IPv6 is in DNS and Firewall.
-- `manager_lock` (String) Manager lock status (e.g., NO_LOCK).
-- `name` (String) Device name.
-- `ownership` (String) Ownership (e.g., CERN).
-- `type` (String) Type of the device (e.g., BRIDGE).
-- `zone` (String) Zone of the device.
+- `dhcp_response` (String)
+- `ipv4_in_dns_and_firewall` (Boolean)
+- `ipv6_in_dns_and_firewall` (Boolean)
+- `manager_lock` (String)
+- `name` (String)
+- `ownership` (String)
+- `type` (String)
+- `zone` (String)
 
 ### Optional
 
-- `description` (String) Description of the device.
-- `inventory_number` (String) Inventory number of the device.
-- `manager` (Attributes) Manager of the device. (see [below for nested schema](#nestedatt--manager))
-- `manufacturer` (String) Manufacturer of the device.
-- `model` (String) Model of the device.
-- `parent` (String) Parent device name.
-- `responsible` (Attributes) Responsible person of the device. (see [below for nested schema](#nestedatt--responsible))
-- `serial_number` (String) Serial number of the device.
-- `tag` (String) Tag of the device.
-- `user` (Attributes) User of the device. (see [below for nested schema](#nestedatt--user))
+- `description` (String)
+- `inventory_number` (String)
+- `manager` (Attributes) Manager of the device (see [below for nested schema](#nestedatt--manager))
+- `manufacturer` (String)
+- `model` (String)
+- `parent` (String)
+- `responsible` (Attributes) Responsible person of the device (see [below for nested schema](#nestedatt--responsible))
+- `serial_number` (String)
+- `tag` (String)
+- `user` (Attributes) User of the device (see [below for nested schema](#nestedatt--user))
 
 ### Read-Only
 
-- `id` (String) Device name.
-- `last_updated` (String) Timestamp of last Terraform update.
-- `version` (Number) Version for optimistic locking.
+- `id` (String) The ID of this resource.
+- `last_updated` (String)
+- `version` (Number)
 
 <a id="nestedatt--manager"></a>
 ### Nested Schema for `manager`
 
 Optional:
 
-- `egroup` (Attributes) (see [below for nested schema](#nestedatt--manager--egroup))
-- `person` (Attributes) (see [below for nested schema](#nestedatt--manager--person))
-- `reserved` (Attributes) (see [below for nested schema](#nestedatt--manager--reserved))
-- `type` (String) Type of contact: PERSON, EGROUP, or RESERVED.
+- `egroup` (Attributes) Details if type == EGROUP (see [below for nested schema](#nestedatt--manager--egroup))
+- `person` (Attributes) Details if type == PERSON (see [below for nested schema](#nestedatt--manager--person))
+- `reserved` (Attributes) Details if type == RESERVED (see [below for nested schema](#nestedatt--manager--reserved))
+- `type` (String) One of PERSON, EGROUP, or RESERVED
 
 <a id="nestedatt--manager--egroup"></a>
 ### Nested Schema for `manager.egroup`
@@ -92,10 +92,10 @@ Optional:
 
 Optional:
 
-- `egroup` (Attributes) (see [below for nested schema](#nestedatt--responsible--egroup))
-- `person` (Attributes) (see [below for nested schema](#nestedatt--responsible--person))
-- `reserved` (Attributes) (see [below for nested schema](#nestedatt--responsible--reserved))
-- `type` (String) Type of contact: PERSON, EGROUP, or RESERVED.
+- `egroup` (Attributes) Details if type == EGROUP (see [below for nested schema](#nestedatt--responsible--egroup))
+- `person` (Attributes) Details if type == PERSON (see [below for nested schema](#nestedatt--responsible--person))
+- `reserved` (Attributes) Details if type == RESERVED (see [below for nested schema](#nestedatt--responsible--reserved))
+- `type` (String) One of PERSON, EGROUP, or RESERVED
 
 <a id="nestedatt--responsible--egroup"></a>
 ### Nested Schema for `responsible.egroup`
@@ -134,10 +134,10 @@ Optional:
 
 Optional:
 
-- `egroup` (Attributes) (see [below for nested schema](#nestedatt--user--egroup))
-- `person` (Attributes) (see [below for nested schema](#nestedatt--user--person))
-- `reserved` (Attributes) (see [below for nested schema](#nestedatt--user--reserved))
-- `type` (String) Type of contact: PERSON, EGROUP, or RESERVED.
+- `egroup` (Attributes) Details if type == EGROUP (see [below for nested schema](#nestedatt--user--egroup))
+- `person` (Attributes) Details if type == PERSON (see [below for nested schema](#nestedatt--user--person))
+- `reserved` (Attributes) Details if type == RESERVED (see [below for nested schema](#nestedatt--user--reserved))
+- `type` (String) One of PERSON, EGROUP, or RESERVED
 
 <a id="nestedatt--user--egroup"></a>
 ### Nested Schema for `user.egroup`

@@ -3,12 +3,12 @@
 page_title: "landb_set Resource - landb"
 subcategory: ""
 description: |-
-  Manages a set.
+  Manages a set
 ---
 
 # landb_set (Resource)
 
-Manages a set.
+Manages a set
 
 
 
@@ -17,32 +17,32 @@ Manages a set.
 
 ### Required
 
-- `name` (String) Name of the set.
-- `network_domain` (String) Network domain of the set.
-- `type` (String) Type of the set (e.g., INTERDOMAIN).
+- `name` (String)
+- `network_domain` (String)
+- `type` (String)
 
 ### Optional
 
-- `description` (String) Description of the set.
-- `project_url` (String) Project URL associated with the set.
-- `receive_notifications` (Boolean) Whether to receive notifications.
-- `responsible` (Attributes) Responsible person for the set. (see [below for nested schema](#nestedatt--responsible))
+- `description` (String)
+- `project_url` (String)
+- `receive_notifications` (Boolean)
+- `responsible` (Attributes) Responsible entity for the set (see [below for nested schema](#nestedatt--responsible))
 
 ### Read-Only
 
-- `id` (String) Name of the set.
-- `last_updated` (String) Timestamp of the last Terraform update of the set.
-- `version` (Number) Version of the set for optimistic locking.
+- `id` (String) The ID of this resource.
+- `last_updated` (String)
+- `version` (Number)
 
 <a id="nestedatt--responsible"></a>
 ### Nested Schema for `responsible`
 
 Optional:
 
-- `egroup` (Attributes) (see [below for nested schema](#nestedatt--responsible--egroup))
-- `person` (Attributes) (see [below for nested schema](#nestedatt--responsible--person))
-- `reserved` (Attributes) (see [below for nested schema](#nestedatt--responsible--reserved))
-- `type` (String) Type of contact: PERSON, EGROUP, or RESERVED.
+- `egroup` (Attributes) Details if type == EGROUP (see [below for nested schema](#nestedatt--responsible--egroup))
+- `person` (Attributes) Details if type == PERSON (see [below for nested schema](#nestedatt--responsible--person))
+- `reserved` (Attributes) Details if type == RESERVED (see [below for nested schema](#nestedatt--responsible--reserved))
+- `type` (String) One of PERSON, EGROUP, or RESERVED
 
 <a id="nestedatt--responsible--egroup"></a>
 ### Nested Schema for `responsible.egroup`
