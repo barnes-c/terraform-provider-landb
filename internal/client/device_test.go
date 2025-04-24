@@ -87,17 +87,17 @@ func TestDeviceCRUD(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, createdDevice.Name, readDevice.Name)
 
-	defer func() {
-		t.Logf("Deleting device: %s", createdDevice.Name)
-		err := cli.DeleteDevice(createdDevice.Name, createdDevice.Version)
-		require.NoError(t, err)
-	}()
-
 	t.Log("Updating device...")
 	readDevice.Description = "Updated via test"
 	updatedDevice, err := cli.UpdateDevice(readDevice.Name, *readDevice)
 	require.NoError(t, err)
 	require.Equal(t, "Updated via test", updatedDevice.Description)
+
+	defer func() {
+		t.Logf("Deleting device: %s", updatedDevice.Name)
+		err := cli.DeleteDevice(updatedDevice.Name, updatedDevice.Version)
+		require.NoError(t, err)
+	}()
 
 	t.Log("Final read to confirm update...")
 	finalDevice, err := cli.GetDevice(deviceName)
