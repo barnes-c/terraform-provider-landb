@@ -33,6 +33,7 @@ Manages a device
 - `manager` (Attributes) Manager of the device (see [below for nested schema](#nestedatt--manager))
 - `manufacturer` (String)
 - `model` (String)
+- `operating_system` (Attributes) Operating system of the device (see [below for nested schema](#nestedatt--operating_system))
 - `parent` (String)
 - `responsible` (Attributes) Responsible person of the device (see [below for nested schema](#nestedatt--responsible))
 - `serial_number` (String)
@@ -85,6 +86,18 @@ Optional:
 - `first_name` (String)
 - `last_name` (String)
 
+
+
+<a id="nestedatt--operating_system"></a>
+### Nested Schema for `operating_system`
+
+Required:
+
+- `name` (String)
+
+Optional:
+
+- `version` (String)
 
 
 <a id="nestedatt--responsible"></a>
