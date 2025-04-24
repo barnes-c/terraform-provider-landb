@@ -16,6 +16,13 @@ type Client struct {
 	audience     string
 }
 
+type APIError struct {
+	Code      string `json:"code"`
+	ErrorType string `json:"error"`
+	Message   string `json:"message"`
+	Timestamp int64  `json:"timestamp"`
+}
+
 func NewClient(apiURL, clientID, clientSecret, audience string) (*Client, error) {
 	client := &Client{
 		HTTPClient:   resty.New(),

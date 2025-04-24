@@ -24,57 +24,70 @@ func (c *Client) CreateSet(set Set) (Set, error) {
 	url := fmt.Sprintf("%s%s", landbURL, setsURL)
 
 	var result []Set
-	_, err := c.HTTPClient.R().
+	var apiErr APIError
+
+	resp, err := c.HTTPClient.R().
 		SetBody([]Set{set}).
 		SetResult(&result).
+		SetError(&apiErr).
 		Post(url)
 	if err != nil {
 		return Set{}, err
 	}
-
-	if len(result) != 1 {
-		return Set{}, fmt.Errorf("unexpected number of sets returned after create: got %d, want 1", len(result))
+	if resp.IsError() {
+		return Set{}, fmt.Errorf("create set failed: %s", apiErr.Message)
 	}
-
 	return result[0], nil
 }
 
 func (c *Client) GetSet(name string) (*Set, error) {
 	url := fmt.Sprintf("%s%s%s", landbURL, setsURL, name)
 
+	var apiErr APIError
 	resp, err := c.HTTPClient.R().
 		SetResult(&Set{}).
+		SetError(&apiErr).
 		Get(url)
 	if err != nil {
 		return nil, err
 	}
-
+	if resp.IsError() {
+		return nil, fmt.Errorf("get set failed: %s", apiErr.Message)
+	}
 	return resp.Result().(*Set), nil
 }
 
-func (c *Client) UpdateSet(name string, device Set) (*Set, error) {
+func (c *Client) UpdateSet(name string, set Set) (*Set, error) {
 	url := fmt.Sprintf("%s%s%s", landbURL, setsURL, name)
 
+	var apiErr APIError
 	resp, err := c.HTTPClient.R().
-		SetBody(device).
+		SetBody(set).
 		SetResult(&Set{}).
+		SetError(&apiErr).
 		Put(url)
 	if err != nil {
 		return nil, err
 	}
-
+	if resp.IsError() {
+		return nil, fmt.Errorf("update set failed: %s", apiErr.Message)
+	}
 	return resp.Result().(*Set), nil
 }
 
 func (c *Client) DeleteSet(name string, version int) error {
 	url := fmt.Sprintf("%s%s%s", landbURL, setsURL, name)
 
-	_, err := c.HTTPClient.R().
+	var apiErr APIError
+	resp, err := c.HTTPClient.R().
 		SetQueryParam("version", fmt.Sprintf("%d", version)).
+		SetError(&apiErr).
 		Delete(url)
 	if err != nil {
 		return err
 	}
-
+	if resp.IsError() {
+		return fmt.Errorf("delete set failed: %s", apiErr.Message)
+	}
 	return nil
 }

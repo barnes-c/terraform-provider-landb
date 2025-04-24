@@ -37,16 +37,19 @@ func (c *Client) CreateDevice(device Device) (Device, error) {
 	url := fmt.Sprintf("%s%s", landbURL, devicesURL)
 
 	var result []Device
-	_, err := c.HTTPClient.R().
+	var apiErr APIError
+
+	resp, err := c.HTTPClient.R().
 		SetBody([]Device{device}).
 		SetResult(&result).
+		SetError(&apiErr).
 		Post(url)
 	if err != nil {
 		return Device{}, err
 	}
 
-	if len(result) != 1 {
-		return Device{}, fmt.Errorf("unexpected number of devices returned after create: got %d, want 1", len(result))
+	if resp.IsError() {
+		return Device{}, fmt.Errorf("create device failed: %s", apiErr.Message)
 	}
 
 	return result[0], nil
@@ -55,11 +58,16 @@ func (c *Client) CreateDevice(device Device) (Device, error) {
 func (c *Client) GetDevice(name string) (*Device, error) {
 	url := fmt.Sprintf("%s%s%s", landbURL, devicesURL, name)
 
+	var apiErr APIError
 	resp, err := c.HTTPClient.R().
 		SetResult(&Device{}).
+		SetError(&apiErr).
 		Get(url)
 	if err != nil {
 		return nil, err
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("get device failed: %s", apiErr.Message)
 	}
 
 	return resp.Result().(*Device), nil
@@ -68,12 +76,17 @@ func (c *Client) GetDevice(name string) (*Device, error) {
 func (c *Client) UpdateDevice(name string, device Device) (*Device, error) {
 	url := fmt.Sprintf("%s%s%s", landbURL, devicesURL, name)
 
+	var apiErr APIError
 	resp, err := c.HTTPClient.R().
 		SetBody(device).
 		SetResult(&Device{}).
+		SetError(&apiErr).
 		Put(url)
 	if err != nil {
 		return nil, err
+	}
+	if resp.IsError() {
+		return nil, fmt.Errorf("update device failed: %s", apiErr.Message)
 	}
 
 	return resp.Result().(*Device), nil
@@ -82,11 +95,16 @@ func (c *Client) UpdateDevice(name string, device Device) (*Device, error) {
 func (c *Client) DeleteDevice(name string, version int) error {
 	url := fmt.Sprintf("%s%s%s", landbURL, devicesURL, name)
 
-	_, err := c.HTTPClient.R().
+	var apiErr APIError
+	resp, err := c.HTTPClient.R().
 		SetQueryParam("version", fmt.Sprintf("%d", version)).
+		SetError(&apiErr).
 		Delete(url)
 	if err != nil {
 		return err
+	}
+	if resp.IsError() {
+		return fmt.Errorf("delete device failed: %s", apiErr.Message)
 	}
 
 	return nil
