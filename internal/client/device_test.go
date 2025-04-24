@@ -57,30 +57,22 @@ func TestDeviceCRUD(t *testing.T) {
 		Manager: landb.Contact{
 			Type: "EGROUP",
 			EGroup: landb.EGroup{
-				Name:  "ai-playground",
-				Email: "christopher.barnes@cern.ch",
+				Name:  "terraform-provider-landb",
+				Email: "terraform-provider-landb@cern.ch",
 			},
 		},
 		Responsible: landb.Contact{
-			Type: "PERSON",
-			Person: landb.Person{
-				FirstName:  "Christopher",
-				LastName:   "Barnes",
-				Email:      "christopher.barnes@cern.ch",
-				Username:   "chbarnes",
-				Department: "IT",
-				Group:      "CD",
+			Type: "EGROUP",
+			EGroup: landb.EGroup{
+				Name:  "terraform-provider-landb",
+				Email: "terraform-provider-landb@cern.ch",
 			},
 		},
 		User: landb.Contact{
-			Type: "PERSON",
-			Person: landb.Person{
-				FirstName:  "Christopher",
-				LastName:   "Barnes",
-				Email:      "christopher.barnes@cern.ch",
-				Username:   "chbarnes",
-				Department: "IT",
-				Group:      "CD",
+			Type: "EGROUP",
+			EGroup: landb.EGroup{
+				Name:  "terraform-provider-landb",
+				Email: "terraform-provider-landb@cern.ch",
 			},
 		},
 	}
