@@ -5,6 +5,7 @@ package landb_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -16,8 +17,9 @@ import (
 func TestSetCRUD(t *testing.T) {
 	apiEndpoint := "https://landb.cern.ch/api/"
 	clientID := "terraform-provider-landb"
-	clientSecret := "KWGE5p5LbPHY6nQRUNpx2EFJ91fYxYbd"
+	clientSecret := os.Getenv("LANDB_SSO_CLIENT_SECRET")
 	audience := "production-microservice-landb-rest"
+	require.NotEmpty(t, clientSecret, "environment variable LANDB_SSO_CLIENT_SECRET must be set")
 
 	cli, err := landb.NewClient(apiEndpoint, clientID, clientSecret, audience)
 	require.NoError(t, err)
@@ -30,27 +32,15 @@ func TestSetCRUD(t *testing.T) {
 	set := landb.Set{
 		Name:                 setName,
 		Type:                 "INTERDOMAIN",
-		NetworkDomain:        "IT-COMPUTING-NETWORK",
+		NetworkDomain:        "GPN",
 		Description:          "Terraform test set",
 		ProjectURL:           "https://example.com",
 		ReceiveNotifications: true,
 		Responsible: landb.Contact{
-			Type: "PERSON",
-			Person: landb.Person{
-				FirstName:  "Christopher",
-				LastName:   "Barnes",
-				Email:      "christopher.barnes@cern.ch",
-				Username:   "chbarnes",
-				Department: "IT",
-				Group:      "CD",
-			},
+			Type: "EGROUP",
 			EGroup: landb.EGroup{
-				Name:  "ai-playground",
-				Email: "christopher.barnes@cern.ch",
-			},
-			Reserved: landb.Reserved{
-				FirstName: "Christopher",
-				LastName:  "Barnes",
+				Name:  "terraform-provider-landb",
+				Email: "terraform-provider-landb@cern.ch",
 			},
 		},
 	}
@@ -65,17 +55,17 @@ func TestSetCRUD(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, createdSet.Name, readSet.Name)
 
-	defer func() {
-		t.Logf("Deleting set: %s", createdSet.Name)
-		err := cli.DeleteSet(createdSet.Name, createdSet.Version)
-		require.NoError(t, err)
-	}()
-
 	t.Log("Updating set...")
 	readSet.Description = "Updated set via test"
 	updatedSet, err := cli.UpdateSet(readSet.Name, *readSet)
 	require.NoError(t, err)
 	require.Equal(t, "Updated set via test", updatedSet.Description)
+
+	defer func() {
+		t.Logf("Deleting set: %s", updatedSet.Name)
+		err := cli.DeleteSet(updatedSet.Name, updatedSet.Version)
+		require.NoError(t, err)
+	}()
 
 	t.Log("Final read to confirm update...")
 	finalSet, err := cli.GetSet(setName)

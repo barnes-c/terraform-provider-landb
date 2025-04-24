@@ -5,6 +5,7 @@ package landb_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -16,8 +17,9 @@ import (
 func TestDeviceCRUD(t *testing.T) {
 	apiEndpoint := "https://landb.cern.ch/api/"
 	clientID := "terraform-provider-landb"
-	clientSecret := "KWGE5p5LbPHY6nQRUNpx2EFJ91fYxYbd"
+	clientSecret := os.Getenv("LANDB_SSO_CLIENT_SECRET")
 	audience := "production-microservice-landb-rest"
+	require.NotEmpty(t, clientSecret, "environment variable LANDB_SSO_CLIENT_SECRET must be set")
 
 	cli, err := landb.NewClient(apiEndpoint, clientID, clientSecret, audience)
 	require.NoError(t, err)
