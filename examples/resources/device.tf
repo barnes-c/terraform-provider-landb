@@ -8,33 +8,33 @@ resource "landb_device" "my_device" {
   ownership                = "CERN"
   type                     = "COMPUTER"
 
-  manager {
+  manager = {
     type = "EGROUP"
-    egroup {
-      name  = "ai-playground"
-      email = "ai-playground-admins@cern.ch"
+    egroup = {
+      name  = "terraform-provider-landb"
+      email = "terraform-provider-landb@cern.ch"
     }
   }
 
-  responsible {
+  responsible = {
     type = "PERSON"
-    person {
-      first_name = "Christopher"
-      last_name  = "Barnes"
-      email      = "christopher.barnes@cern.ch"
-      username   = "chbarnes"
+    person = {
+      first_name = "Name"
+      last_name  = "LastName"
+      email      = "Name@cern.ch"
+      username   = "user"
       department = "IT"
       group      = "CD"
     }
   }
 
-  user {
+  user = {
     type = "PERSON"
-    person {
-      first_name = "Christopher"
-      last_name  = "Barnes"
-      email      = "christopher.barnes@cern.ch"
-      username   = "chbarnes"
+    person = {
+      first_name = "Name"
+      last_name  = "LastName"
+      email      = "Name@cern.ch"
+      username   = "user"
       department = "IT"
       group      = "CD"
     }
@@ -48,10 +48,10 @@ resource "landb_device" "my_device" {
   manufacturer     = "Cisco"
   model            = "ABC123"
 
-  location {
-    building = "31"
-    floor    = "1"
-    room     = "006"
+  location = {
+    building = "0000"
+    floor    = "0"
+    room     = "0000"
   }
 
   operating_system {
