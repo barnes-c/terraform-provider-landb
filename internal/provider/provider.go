@@ -213,6 +213,7 @@ func (p *landbProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *landbProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewDeviceResource,
+		NewSetAttachmentResource,
 		NewSetResource,
 	}
 }
@@ -220,5 +221,6 @@ func (p *landbProvider) Resources(_ context.Context) []func() resource.Resource 
 func (p *landbProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewDeviceDataSource,
+		NewSetDataSource,
 	}
 }
