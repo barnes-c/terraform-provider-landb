@@ -1,3 +1,6 @@
+// Copyright (c) Christopher Barnes <christopher.barnes@cern.ch>
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package landb
 
 import (
