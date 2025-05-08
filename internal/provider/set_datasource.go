@@ -55,12 +55,12 @@ func (d *setDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, re
 			"network_domain": schema.StringAttribute{
 				Computed: true,
 			},
-			"responsible": contactSchemaBlock("Responsible entity for the set"),
-			"description": schema.StringAttribute{Computed: true},
-			"project_url": schema.StringAttribute{Computed: true},
+			"responsible":           contactSchemaBlock("Responsible entity for the set"),
+			"description":           schema.StringAttribute{Computed: true},
+			"project_url":           schema.StringAttribute{Computed: true},
 			"receive_notifications": schema.BoolAttribute{Computed: true},
-			"version": schema.Int64Attribute{Computed: true},
-			"last_updated": schema.StringAttribute{Computed: true},
+			"version":               schema.Int64Attribute{Computed: true},
+			"last_updated":          schema.StringAttribute{Computed: true},
 		},
 	}
 }

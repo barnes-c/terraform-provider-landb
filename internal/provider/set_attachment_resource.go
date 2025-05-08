@@ -19,7 +19,7 @@ import (
 type setAttachmentResourceModel struct {
 	ID          types.String `tfsdk:"id"`
 	SetName     types.String `tfsdk:"set_name"`
-	Name        types.String `tfsdk:"name"`
+	DeviceName  types.String `tfsdk:"device_name"`
 	IPv4        types.String `tfsdk:"ipv4"`
 	IPv6        types.String `tfsdk:"ipv6"`
 	Description types.String `tfsdk:"description"`
@@ -50,7 +50,7 @@ func (r *setAttachmentResource) Schema(_ context.Context, _ resource.SchemaReque
 			"set_name": schema.StringAttribute{
 				Required: true,
 			},
-			"name": schema.StringAttribute{
+			"device_name": schema.StringAttribute{
 				Required:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -87,7 +87,7 @@ func (r *setAttachmentResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	att := landb.SetAttachment{
-		Name:        plan.Name.ValueString(),
+		DeviceName:  plan.DeviceName.ValueString(),
 		IPv4:        plan.IPv4.ValueString(),
 		IPv6:        plan.IPv6.ValueString(),
 		Description: plan.Description.ValueString(),
@@ -99,7 +99,7 @@ func (r *setAttachmentResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	plan.ID = types.StringValue(created.Name)
+	plan.ID = types.StringValue(created.DeviceName)
 	plan.CreatedAt = types.StringValue(created.CreatedAt.Format(time.RFC850))
 	plan.UpdatedAt = types.StringValue(created.UpdatedAt.Format(time.RFC850))
 
@@ -121,7 +121,7 @@ func (r *setAttachmentResource) Read(ctx context.Context, req resource.ReadReque
 
 	var found *landb.SetAttachment
 	for _, a := range all {
-		if a.Name == state.ID.ValueString() {
+		if a.DeviceName == state.ID.ValueString() {
 			found = &a
 			break
 		}
@@ -131,7 +131,7 @@ func (r *setAttachmentResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	state.Name = types.StringValue(found.Name)
+	state.DeviceName = types.StringValue(found.DeviceName)
 	state.IPv4 = types.StringValue(found.IPv4)
 	state.IPv6 = types.StringValue(found.IPv6)
 	state.Description = types.StringValue(found.Description)
@@ -149,7 +149,7 @@ func (r *setAttachmentResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	att := landb.SetAttachment{
-		Name:        plan.Name.ValueString(),
+		DeviceName:  plan.DeviceName.ValueString(),
 		IPv4:        plan.IPv4.ValueString(),
 		IPv6:        plan.IPv6.ValueString(),
 		Description: plan.Description.ValueString(),

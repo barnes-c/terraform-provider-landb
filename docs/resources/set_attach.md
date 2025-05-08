@@ -17,9 +17,9 @@ Manages a single IP-address attachment on a set
 
 ### Required
 
+- `device_name` (String)
 - `ipv4` (String)
 - `ipv6` (String)
-- `name` (String)
 - `set_name` (String)
 
 ### Optional
