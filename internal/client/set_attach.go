@@ -5,13 +5,14 @@ package landb
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 )
 
 const setAttachmentURL = "beta/sets/%s/ip-addresses"
 
 type SetAttachment struct {
-	DeviceName  string    `json:"deviceName"`
+	DeviceName  string    `json:"name"`
 	IPv4        string    `json:"ipv4"`
 	IPv6        string    `json:"ipv6"`
 	Description string    `json:"description"`
@@ -86,6 +87,12 @@ func (c *Client) DeleteSetAttachment(setName, attachmentName string) error {
 	if err != nil {
 		return err
 	}
+
+	switch resp.StatusCode() {
+	case http.StatusMethodNotAllowed, http.StatusNotImplemented:
+		return ErrDeleteNotSupported
+	}
+
 	if resp.IsError() {
 		return fmt.Errorf("delete set attachment failed: %s", apiErr.Message)
 	}

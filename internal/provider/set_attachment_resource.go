@@ -4,6 +4,8 @@ package provider
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	landb "landb/internal/client"
@@ -172,11 +174,27 @@ func (r *setAttachmentResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	if err := r.client.DeleteSetAttachment(state.SetName.ValueString(), state.ID.ValueString()); err != nil {
-		resp.Diagnostics.AddError("Error deleting set attachment", err.Error())
+	err := r.client.DeleteSetAttachment(state.SetName.ValueString(), state.ID.ValueString())
+	if err != nil {
+		if errors.Is(err, landb.ErrDeleteNotSupported) {
+			resp.Diagnostics.AddWarning(
+				"Delete not supported by remote API",
+				fmt.Sprintf(
+					"The API does not allow deleting attachments (set=%q, attachment=%q); removing from Terraform state only.",
+					state.SetName.ValueString(),
+					state.ID.ValueString(),
+				),
+			)
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
+		resp.Diagnostics.AddError(
+			"Error deleting set attachment",
+			err.Error(),
+		)
 		return
 	}
-
 	resp.State.RemoveResource(ctx)
 }
 

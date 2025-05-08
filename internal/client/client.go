@@ -4,6 +4,7 @@
 package landb
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
@@ -22,6 +23,8 @@ type APIError struct {
 	Message   string `json:"message"`
 	Timestamp int64  `json:"timestamp"`
 }
+
+var ErrDeleteNotSupported = errors.New("delete operation not supported by API")
 
 func NewClient(apiURL, clientID, clientSecret, audience string) (*Client, error) {
 	client := &Client{
