@@ -1,0 +1,26 @@
+stages:
+  - release
+
+release:
+  stage: release
+  image:
+    name: registry.cern.ch/docker.io/goreleaser/goreleaser:latest
+    entrypoint: [""]
+  only:
+    - tags
+  variables:
+    GIT_DEPTH: "0"
+    GPG_PRIVATE_KEY: $GPG_PRIVATE_KEY
+    GPG_PASSPHRASE: $GPG_PASSPHRASE
+    GITLAB_TOKEN: $GORELEASER_GITLAB_TOKEN
+  before_script:
+    - apk add --no-cache gnupg
+    - mkdir -p ~/.gnupg && echo "pinentry-mode loopback" > ~/.gnupg/gpg.conf
+    - echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+    - |
+      export GPG_FINGERPRINT="$(
+        gpg --list-secret-keys --with-colons \
+        | awk -F: '/^sec/ {print $5}'
+      )"
+  script:
+    - goreleaser release --clean

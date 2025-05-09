@@ -3,7 +3,6 @@ version: 2
 builds:
   - env:
       - CGO_ENABLED=0
-      - GPG_FINGERPRINT= 7E43BEB6DD252D1C2E36DB4F16DF69C47E985B6F
     mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
@@ -37,7 +36,7 @@ checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
 signs:
-  - artifacts: checksum
+  - artifacts: all
     args:
       - "--batch"
       - "--local-user"
@@ -50,4 +49,9 @@ release:
   extra_files:
     - glob: "terraform-registry-manifest.json"
       name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"
-  replace_existing_artifacts: true
+gitlab_urls:
+  api: https://gitlab.cern.ch/api/v4/
+  download: https://gitlab.cern.ch
+  skip_tls_verify: false
+  use_package_registry: false
+  use_job_token: false
