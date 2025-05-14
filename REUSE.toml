@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2025 CERN
+#
+# SPDX-License-Identifier: CC0-1.0
+
+version = 1
+
+SPDX-PackageName = "terraform-provider-roger"
+SPDX-PackageSupplier = "CERN Configuration Team <ai-config-team@cern.ch>"
+SPDX-PackageDownloadLocation = "https://gitlab.cern.ch/ai-config-team/terraform-puppet/terraform-provider-roger"
+
+[[annotations]]
+path = [
+    ".goreleaser.yml",
+    "examples/**",
+    "GNUmakefile",
+    "go.mod",
+    "go.sum",
+    "terraform-registry-manifest.json",
+    "tools/go.mod",
+    "tools/go.sum"
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 CERN"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = "docs/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2025 CERN"
+SPDX-License-Identifier = "CC-BY-4.0"
