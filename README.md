@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2025 CERN
+
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # Terraform Provider LanDB
 
 This is a terraform provider for [LanDB](https://landb.docs.cern.ch/). LanDB is an internal asset management system used at CERN to track and manage information about network-connected devices and their associations with users, locations, and services.
