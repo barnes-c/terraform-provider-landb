@@ -1,6 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-FileCopyrightText: 2025 CERN
 //
+// SPDX-License-Identifier: CC-BY-4.0
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //go:build generate
