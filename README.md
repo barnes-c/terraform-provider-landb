@@ -23,6 +23,8 @@ provider "landb" {
 }
 ```
 
+By default the endpoint and audience are set to `https://landb.cern.ch/api/` or `production-microservice-landb-rest` respectively.
+
 It is also possible to set these variables via environment variables. The provider expects them to be named `LANDB_ENDPOINT`, `LANDB_SSO_CLIENT_ID`, `LANDB_SSO_CLIENT_SECRET` and `LANDB_SSO_AUDIENCE`.
 
 To be able to use the Provider valid Kerberos tickets must also be present
