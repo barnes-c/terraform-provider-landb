@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2025 CERN
+
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # Terraform Provider LanDB
 
 This is a terraform provider for [LanDB](https://landb.docs.cern.ch/). LanDB is an internal asset management system used at CERN to track and manage information about network-connected devices and their associations with users, locations, and services.
@@ -16,6 +22,8 @@ provider "landb" {
 	audience       ="<YOUR-AUDIENCE>"
 }
 ```
+
+By default the endpoint and audience are set to `https://landb.cern.ch/api/` or `production-microservice-landb-rest` respectively.
 
 It is also possible to set these variables via environment variables. The provider expects them to be named `LANDB_ENDPOINT`, `LANDB_SSO_CLIENT_ID`, `LANDB_SSO_CLIENT_SECRET` and `LANDB_SSO_AUDIENCE`.
 

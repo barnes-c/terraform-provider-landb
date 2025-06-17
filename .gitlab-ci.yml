@@ -1,5 +1,18 @@
+# SPDX-FileCopyrightText: 2025 CERN
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 stages:
+  - formatting
   - release
+
+reuse:
+  stage: formatting
+  image:
+    name: registry.cern.ch/docker.io/fsfe/reuse:latest
+    entrypoint: [""]
+  script:
+    - reuse lint
 
 release:
   stage: release

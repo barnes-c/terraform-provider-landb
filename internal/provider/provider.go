@@ -1,4 +1,5 @@
-// Copyright (c) Christopher Barnes <christopher.barnes@cern.ch>
+// SPDX-FileCopyrightText: 2025 CERN
+//
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 package provider
@@ -75,10 +76,16 @@ func (p *landbProvider) Configure(ctx context.Context, req provider.ConfigureReq
 		return
 	}
 
-	endpoint := os.Getenv("LANDB_ENDPOINT")
 	client_id := os.Getenv("LANDB_SSO_CLIENT_ID")
 	client_secret := os.Getenv("LANDB_SSO_CLIENT_SECRET")
-	audience := os.Getenv("LANDB_SSO_AUDIENCE")
+	audience, ok := os.LookupEnv("LANDB_SSO_CLIENT_ID")
+	if !ok {
+		audience = "production-microservice-landb-rest"
+	}
+	endpoint, ok := os.LookupEnv("LANDB_ENDPOINT")
+	if !ok {
+		endpoint = "https://landb.cern.ch/api/"
+	}
 
 	ctx = tflog.SetField(ctx, "endpoint", endpoint)
 	ctx = tflog.SetField(ctx, "client_id", client_id)
