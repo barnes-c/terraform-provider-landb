@@ -78,7 +78,7 @@ func (p *landbProvider) Configure(ctx context.Context, req provider.ConfigureReq
 
 	client_id := os.Getenv("LANDB_SSO_CLIENT_ID")
 	client_secret := os.Getenv("LANDB_SSO_CLIENT_SECRET")
-	audience, ok := os.LookupEnv("LANDB_SSO_CLIENT_ID")
+	audience, ok := os.LookupEnv("LANDB_SSO_AUDIENCE")
 	if !ok {
 		audience = "production-microservice-landb-rest"
 	}
